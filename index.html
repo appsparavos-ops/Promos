@@ -191,16 +191,20 @@
     userRef.once('value').then((snapshot) => {
         if (snapshot.exists()) {
         currentUser = snapshot.val();
-        if (currentUser.attempts >= 2) {
-          alert('Este número de teléfono ya ha participado y ha agotado sus intentos.');
+        // Bloquear si ya agotó intentos o si ganó en la primera tirada
+        const wonFirst = currentUser.attempt1_result && currentUser.attempt1_result.indexOf('🎁') !== -1;
+        if (currentUser.attempts >= 2 || wonFirst) {
+          alert('Este número de teléfono ya ha participado y no puede jugar de nuevo.');
         } else {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
           window.scrollTo(0, 0);
-          scratchContainer.style.pointerEvents = 'auto';
-          if(currentUser.attempts === 1){
+          // Si ya hizo un intento y no ganó, mostrar segundo intento; en otro caso permitir raspar
+          if (currentUser.attempts === 1) {
             secondAttemptBtn.style.display = 'block';
             scratchContainer.style.pointerEvents = 'none';
+          } else {
+            scratchContainer.style.pointerEvents = 'auto';
           }
         }
       } else {
@@ -279,27 +283,32 @@
 
     // Limpiar y crear elementos
     goodbyeDiv.innerHTML = '';
-    const bigP = document.createElement('p');
-    bigP.textContent = 'Gracias por participar';
-    goodbyeDiv.appendChild(bigP);
-
     if (hasPrize) {
+      // Solo mostrar el premio ganado
       const prizeP = document.createElement('p');
       prizeP.textContent = prize;
       prizeP.style.color = 'gold';
       prizeP.style.marginTop = '1rem';
       prizeP.style.fontSize = '3.5vw';
       goodbyeDiv.appendChild(prizeP);
+      // animación para el premio
+      setTimeout(() => {
+        goodbyeDiv.style.display = 'flex';
+        goodbyeDiv.style.pointerEvents = 'auto';
+        goodbyeDiv.style.opacity = '1';
+      }, 100);
+    } else {
+      const bigP = document.createElement('p');
+      bigP.textContent = 'Gracias por participar';
+      goodbyeDiv.appendChild(bigP);
+      goodbyeDiv.style.display = 'flex';
+      goodbyeDiv.style.pointerEvents = 'auto';
+      setTimeout(() => {
+        goodbyeDiv.style.opacity = '1';
+        bigP.style.transform = 'scale(1)';
+        bigP.style.fontSize = '8vw';
+      }, 100);
     }
-
-    goodbyeDiv.style.display = 'flex';
-    goodbyeDiv.style.pointerEvents = 'auto';
-
-    setTimeout(() => {
-      goodbyeDiv.style.opacity = '1';
-      bigP.style.transform = 'scale(1)';
-      bigP.style.fontSize = '8vw';
-    }, 100);
   }
 
   function checkReveal(){

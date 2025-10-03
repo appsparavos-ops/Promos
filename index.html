@@ -285,11 +285,12 @@
     goodbyeDiv.innerHTML = '';
     if (hasPrize) {
       // Solo mostrar el premio ganado
-      const prizeP = document.createElement('p');
-      prizeP.textContent = prize;
-      prizeP.style.color = 'gold';
-      prizeP.style.marginTop = '1rem';
-      prizeP.style.fontSize = '3.5vw';
+  const prizeP = document.createElement('p');
+  prizeP.textContent = prize;
+  prizeP.style.color = 'gold';
+  prizeP.style.marginTop = '1rem';
+  // Mostrar el premio 3 veces más grande
+  prizeP.style.fontSize = '10.5vw';
       goodbyeDiv.appendChild(prizeP);
       // animación para el premio
       setTimeout(() => {
@@ -372,6 +373,17 @@
           updates['/users/' + currentUser.phone + '/' + attemptField] = prize;
           database.ref().update(updates);
 
+          // Si hay premio (incluye código), registrar ganador globalmente
+          if (prize.startsWith('🎁')) {
+            // extraer código después de 'Código: '
+            const parts = prize.split('Código:');
+            const code = parts.length > 1 ? parts[1].trim() : '';
+            if (code) {
+              const winnerRef = database.ref('winners');
+              winnerRef.push({ phone: currentUser.phone, code: code, prize: prize, ts: Date.now() });
+            }
+          }
+
           const wasFirstAttempt = currentUser.attempts === 0;
           currentUser.attempts = attemptsAfter;
 
@@ -417,6 +429,16 @@
       updates['/users/' + currentUser.phone + '/attempts'] = attemptsAfter;
       updates['/users/' + currentUser.phone + '/' + attemptField] = prize;
       database.ref().update(updates);
+
+      // Registrar ganador si corresponde
+      if (prize.startsWith('🎁')) {
+        const parts = prize.split('Código:');
+        const code = parts.length > 1 ? parts[1].trim() : '';
+        if (code) {
+          const winnerRef = database.ref('winners');
+          winnerRef.push({ phone: currentUser.phone, code: code, prize: prize, ts: Date.now() });
+        }
+      }
 
       const wasFirstAttempt = currentUser.attempts === 0;
       currentUser.attempts = attemptsAfter;

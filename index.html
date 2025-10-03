@@ -11,6 +11,7 @@
     color: #fff;
     font-family: Arial, sans-serif;
     text-align: center;
+    overflow: hidden; /* Evita el scroll en la página */
   }
   h1 { color: #e74c3c; }
   .muted { font-size: 13px; color: #aaa; }
@@ -23,7 +24,7 @@
     pointer-events: none; /* Bloquear raspadita inicialmente */
   }
   #prizeBox { 
-    position: absolute; top: 0; left: 0; width: 300px; height: 300px; 
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
     display: flex; align-items: center; justify-content: center; 
     background: #111; color: gold; font-weight: bold; 
   }
@@ -108,6 +109,39 @@
     transform: scale(0.1);
     transition: all 1.5s ease-out;
   }
+
+  @media screen and (max-width: 600px) {
+    .modal-content {
+      width: 90%;
+      height: 80vh; /* Ocupa el 80% de la altura de la pantalla */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    #mainContent {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .scratch-wrap {
+      width: 80vw; /* Ancho relativo a la pantalla */
+      height: 80vw; /* Misma altura para mantener la proporción */
+      max-width: 300px; /* Mantiene el tamaño máximo del diseño original */
+      max-height: 300px;
+    }
+
+    #scratchCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    #goodbyeMessage p {
+      font-size: 10vw; /* Tamaño de fuente relativo al ancho de la pantalla */
+    }
+  }
 </style>
 </head>
 <body>
@@ -124,16 +158,23 @@
     </div>
   </div>
 
-  <h1>🍔 Raspadita de Octubre 🍔</h1>
-  <p>Sigue a <b>@azburgerhouse</b> en Instagram para jugar</p>
-  <div id="scratchContainer" class="scratch-wrap">
-    <div id="prizeBox"><div id="prizeText">Pulsa & raspa para descubrir</div></div>
-    <canvas id="scratchCanvas" width="300" height="300"></canvas>
-  </div>
+  <div id="mainContent" style="display: none;">
+    <h1>🍔 Raspadita de Octubre 🍔</h1>
+    <p>Sigue a <b>@azburgerhouse</b> en Instagram para jugar</p>
+    <div id="scratchContainer" class="scratch-wrap">
+      <div id="prizeBox"><div id="prizeText">Pulsa & raspa para descubrir</div></div>
+      <canvas id="scratchCanvas" width="300" height="300"></canvas>
+    </div>
 
-  <p>👆 Raspa el Logo 👆</p>
-  <button id="secondAttemptBtn">Jugar 2do Intento</button>
-  <p id="result"></p>
+    <p>👆 Raspa el Logo 👆</p>
+    <button id="secondAttemptBtn">Jugar 2do Intento</button>
+    <p id="result"></p>
+    <footer>
+      <p class="muted">Si no sigues la página no tendrás derecho a reclamar el premio.</p>
+      <p class="muted">Premios válidos hasta el 31/10.</p>
+      <p class="muted">No acumulables con otras promociones</p>
+    </footer>
+  </div>
 
   <div id="goodbyeMessage" style="display: none;">
     <p>Gracias por participar</p>
@@ -182,17 +223,22 @@
 
     const userRef = database.ref('users/' + phone);
     userRef.once('value').then((snapshot) => {
-      if (snapshot.exists()) {
+        if (snapshot.exists()) {
         currentUser = snapshot.val();
-        if (currentUser.attempts >= 2) {
-          alert('Este número de teléfono ya ha participado y ha agotado sus intentos.');
+        // Bloquear si ya agotó intentos o si ganó en la primera tirada
+        const wonFirst = currentUser.attempt1_result && currentUser.attempt1_result.indexOf('🎁') !== -1;
+        if (currentUser.attempts >= 2 || wonFirst) {
+          alert('Este número de teléfono ya ha participado y no puede jugar de nuevo.');
         } else {
           modal.style.display = 'none';
+          document.getElementById('mainContent').style.display = 'block';
           window.scrollTo(0, 0);
-          scratchContainer.style.pointerEvents = 'auto';
-          if(currentUser.attempts === 1){
+          // Si ya hizo un intento y no ganó, mostrar segundo intento; en otro caso permitir raspar
+          if (currentUser.attempts === 1) {
             secondAttemptBtn.style.display = 'block';
             scratchContainer.style.pointerEvents = 'none';
+          } else {
+            scratchContainer.style.pointerEvents = 'auto';
           }
         }
       } else {
@@ -205,6 +251,7 @@
         };
         userRef.set(currentUser).then(() => {
           modal.style.display = 'none';
+          document.getElementById('mainContent').style.display = 'block';
           scratchContainer.style.pointerEvents = 'auto';
         });
       }
@@ -220,29 +267,11 @@
     result.textContent = '';
   });
 
-  const CODES_5 = ['AZ5-001', 'AZ5-002', 'AZ5-003', 'AZ5-004', 'AZ5-005', 'AZ5-006', 'AZ5-007', 'AZ5-008', 'AZ5-009', 'AZ5-010'];
-  const CODES_10 = ['AZ10-001', 'AZ10-002', 'AZ10-003', 'AZ10-004', 'AZ10-005'];
-  let counts = {rem5: CODES_5.length, rem10: CODES_10.length};
-
   function weightedPick(){
     const r = Math.random()*100;
     if(r < 60) return 'participa';
     if(r < 90) return '5';
     return '10';
-  }
-
-  function popCode(type){
-    if(type==='5' && counts.rem5>0){
-      const code = CODES_5[CODES_5.length - counts.rem5];
-      counts.rem5--;
-      return code;
-    }
-    if(type==='10' && counts.rem10>0){
-      const code = CODES_10[CODES_10.length - counts.rem10];
-      counts.rem10--;
-      return code;
-    }
-    return null;
   }
 
   const canvas = document.getElementById('scratchCanvas');
@@ -253,12 +282,18 @@
   const img = new Image();
   img.src = 'logo.png';
   function resetCanvas(){
+    const container = document.querySelector('.scratch-wrap');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
     ctx.globalCompositeOperation='source-over';
-    ctx.drawImage(img,0,0,300,300);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     prizeText.textContent = 'Pulsa & raspa para descubrir';
   }
 
-  img.onload = resetCanvas;
+  img.onload = () => {
+      resetCanvas();
+      window.addEventListener('resize', resetCanvas);
+  };
 
   let drawing=false;
   let revealed = false;
@@ -278,29 +313,51 @@
     checkReveal();
   }
 
-  function showGoodbyeMessage() {
-    const mainContent = document.querySelectorAll('h1, .scratch-wrap, footer, #result, button');
-    mainContent.forEach(el => el.style.display = 'none');
-
+  function showGoodbyeMessage(passedPrize = '') {
+    document.getElementById('mainContent').style.display = 'none';
     const goodbyeDiv = document.getElementById('goodbyeMessage');
-    const goodbyeP = goodbyeDiv.querySelector('p');
-    
-    goodbyeDiv.style.display = 'flex';
-    goodbyeDiv.style.pointerEvents = 'auto';
-    
-    setTimeout(() => {
-      goodbyeDiv.style.opacity = '1';
-      goodbyeP.style.transform = 'scale(1)';
-      goodbyeP.style.fontSize = '8vw';
-    }, 100);
+
+    // Construir contenido: mensaje grande + (opcional) premio
+    const prize = passedPrize || ((typeof prizeText !== 'undefined' && prizeText) ? prizeText.textContent.trim() : '');
+    const hasPrize = prize.includes('🎁');
+
+    // Limpiar y crear elementos
+    goodbyeDiv.innerHTML = '';
+    if (hasPrize) {
+      // Solo mostrar el premio ganado
+  const prizeP = document.createElement('p');
+  prizeP.textContent = prize;
+  prizeP.style.color = 'gold';
+  prizeP.style.marginTop = '1rem';
+  // Mostrar el premio 3 veces más grande
+  prizeP.style.fontSize = '10.5vw';
+      goodbyeDiv.appendChild(prizeP);
+      // animación para el premio
+      setTimeout(() => {
+        goodbyeDiv.style.display = 'flex';
+        goodbyeDiv.style.pointerEvents = 'auto';
+        goodbyeDiv.style.opacity = '1';
+      }, 100);
+    } else {
+      const bigP = document.createElement('p');
+      bigP.textContent = 'Gracias por participar';
+      goodbyeDiv.appendChild(bigP);
+      goodbyeDiv.style.display = 'flex';
+      goodbyeDiv.style.pointerEvents = 'auto';
+      setTimeout(() => {
+        goodbyeDiv.style.opacity = '1';
+        bigP.style.transform = 'scale(1)';
+        bigP.style.fontSize = '8vw';
+      }, 100);
+    }
   }
 
   function checkReveal(){
     if(revealed) return;
-    const imgData = ctx.getImageData(0,0,300,300).data;
+    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height).data;
     let transparent=0;
     for(let i=3;i<imgData.length;i+=4) if(imgData[i]<128) transparent++;
-  if(transparent > 300*300*0.35) {
+  if(transparent > canvas.width*canvas.height*0.35) {
         revealed = true;
         finalizePrize();
     }
@@ -309,31 +366,130 @@
   function finalizePrize(){
     const pick = weightedPick();
     let prize = '❌ Seguí participando';
-    if(pick !== 'participa'){
-        const code = popCode(pick);
-        if(code){
-            if(pick==='5') prize = '🎁 5% OFF – Código: '+code;
-            else prize = '🎁 10% OFF – Código: '+code;
-            result.textContent = 'Válido hasta 31/10. Mostrar en local para canjear.';
-        }
-    }
-    prizeText.textContent = prize;
-    
-    // Guardar en Firebase
-    if(currentUser){
-        const attemptField = isSecondAttempt ? 'attempt2_result' : 'attempt1_result';
-        const updates = {};
-        updates['/users/' + currentUser.phone + '/attempts'] = currentUser.attempts + 1;
-        updates['/users/' + currentUser.phone + '/' + attemptField] = prize;
-        database.ref().update(updates);
 
-        currentUser.attempts += 1;
-        if(currentUser.attempts < 2){
-            secondAttemptBtn.style.display = 'block';
+    // Si el pick sugiere un premio, intentamos reservar uno de forma atómica en /prizes
+    if (pick === '5' || pick === '10') {
+      const prizesRef = database.ref('prizes');
+      // Usamos transaction para evitar condiciones de carrera entre clientes
+      prizesRef.transaction(prizes => {
+        if (!prizes) return prizes; // nada que hacer
+        const counts = prizes.counts || {};
+        const codes5 = prizes.codes_5 || [];
+        const codes10 = prizes.codes_10 || [];
+
+        if (pick === '5' && counts.rem5 > 0 && codes5.length > 0) {
+          // asignar el primer código disponible
+          const code = codes5.shift();
+          counts.rem5 = Math.max(0, counts.rem5 - 1);
+          prizes.codes_5 = codes5;
+          prizes.counts = counts;
+          prizes._last_assigned = {type: '5', code: code};
+          prize = '🎁 5% OFF – Código: ' + code;
+        } else if (pick === '10' && counts.rem10 > 0 && codes10.length > 0) {
+          const code = codes10.shift();
+          counts.rem10 = Math.max(0, counts.rem10 - 1);
+          prizes.codes_10 = codes10;
+          prizes.counts = counts;
+          prizes._last_assigned = {type: '10', code: code};
+          prize = '🎁 10% OFF – Código: ' + code;
         } else {
-            setTimeout(showGoodbyeMessage, 3000);
+          // No hay códigos disponibles para el tipo seleccionado
+          prize = '❌ Seguí participando';
         }
+        return prizes;
+      }).then(() => {
+        // Después de la transacción, actualizamos UI y guardamos en el registro del usuario
+        prizeText.textContent = prize;
+        if (prize.startsWith('🎁')) {
+          result.textContent = 'Válido hasta 31/10. Mostrar en local para canjear.';
+        }
+
+        // Guardar en Firebase - registro del usuario
+        if(currentUser){
+          const attemptField = isSecondAttempt ? 'attempt2_result' : 'attempt1_result';
+          const updates = {};
+          const attemptsAfter = currentUser.attempts + 1;
+          updates['/users/' + currentUser.phone + '/attempts'] = attemptsAfter;
+          updates['/users/' + currentUser.phone + '/' + attemptField] = prize;
+          database.ref().update(updates);
+
+          // Si hay premio (incluye código), registrar ganador globalmente
+          if (prize.startsWith('🎁')) {
+            // extraer código después de 'Código: '
+            const parts = prize.split('Código:');
+            const code = parts.length > 1 ? parts[1].trim() : '';
+            if (code) {
+              const winnerRef = database.ref('winners');
+              winnerRef.push({ phone: currentUser.phone, code: code, prize: prize, ts: Date.now() });
+            }
+          }
+
+          const wasFirstAttempt = currentUser.attempts === 0;
+          currentUser.attempts = attemptsAfter;
+
+          const wonPrize = prize.startsWith('🎁');
+
+          if (wasFirstAttempt && wonPrize) {
+            // Si ganó en la primera tirada, finalizar juego: no 2do intento y mostrar goodbye/prize
+            secondAttemptBtn.style.display = 'none';
+            scratchContainer.style.pointerEvents = 'none';
+            setTimeout(() => showGoodbyeMessage(prize), 4000);
+          } else if (currentUser.attempts < 2) {
+            // Aún tiene intento disponible
+            secondAttemptBtn.style.display = 'block';
+            // permitir raspado si corresponde
+            scratchContainer.style.pointerEvents = 'auto';
+          } else {
+            // Juego finalizado (no quedan intentos)
+            // Juego finalizado: ocultar botón y mostrar overlay con premio (si hay) o mensaje de gracias
+            secondAttemptBtn.style.display = 'none';
+            scratchContainer.style.pointerEvents = 'none';
+            setTimeout(() => showGoodbyeMessage(prize), 4000);
+          }
+        }
+      }).catch(err => {
+        console.error('Transaction error:', err);
+        prizeText.textContent = '❌ Seguí participando';
+      });
+      return; // salimos, la actualización de user está dentro del then()
+    }
+
+    // Si pick === 'participa' o no se asignó código, simplemente mostrar y guardar
+    prizeText.textContent = prize;
+    if(currentUser){
+      const attemptField = isSecondAttempt ? 'attempt2_result' : 'attempt1_result';
+      const updates = {};
+      const attemptsAfter = currentUser.attempts + 1;
+      updates['/users/' + currentUser.phone + '/attempts'] = attemptsAfter;
+      updates['/users/' + currentUser.phone + '/' + attemptField] = prize;
+      database.ref().update(updates);
+
+      // Registrar ganador si corresponde
+      if (prize.startsWith('🎁')) {
+        const parts = prize.split('Código:');
+        const code = parts.length > 1 ? parts[1].trim() : '';
+        if (code) {
+          const winnerRef = database.ref('winners');
+          winnerRef.push({ phone: currentUser.phone, code: code, prize: prize, ts: Date.now() });
+        }
+      }
+
+      const wasFirstAttempt = currentUser.attempts === 0;
+      currentUser.attempts = attemptsAfter;
+      const wonPrize = prize.startsWith('🎁');
+      if (wasFirstAttempt && wonPrize) {
+        secondAttemptBtn.style.display = 'none';
         scratchContainer.style.pointerEvents = 'none';
+  setTimeout(() => showGoodbyeMessage(prize), 4000);
+      } else if(currentUser.attempts < 2){
+        secondAttemptBtn.style.display = 'block';
+        scratchContainer.style.pointerEvents = 'auto';
+      } else {
+        // Juego finalizado: ocultar botón y mostrar overlay con premio (si hay) o mensaje de gracias
+        secondAttemptBtn.style.display = 'none';
+        scratchContainer.style.pointerEvents = 'none';
+        setTimeout(() => showGoodbyeMessage(prize), 4000);
+      }
     }
   }
 
@@ -352,10 +508,5 @@
   window.addEventListener('touchend', stopDrawing);
 
 </script>
-  <footer>
-    <p class="muted">Si no sigues la página no tendrás derecho a reclamar el premio.</p>
-    <p class="muted">Premios válidos hasta el 31/10.</p>
-    <p class="muted">No acumulables con otras promociones</p>
-  </footer>
 </body>
 </html>

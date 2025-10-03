@@ -11,6 +11,7 @@
     color: #fff;
     font-family: Arial, sans-serif;
     text-align: center;
+    overflow: hidden; /* Evita el scroll en la página */
   }
   h1 { color: #e74c3c; }
   .muted { font-size: 13px; color: #aaa; }
@@ -23,7 +24,7 @@
     pointer-events: none; /* Bloquear raspadita inicialmente */
   }
   #prizeBox { 
-    position: absolute; top: 0; left: 0; width: 300px; height: 300px; 
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
     display: flex; align-items: center; justify-content: center; 
     background: #111; color: gold; font-weight: bold; 
   }
@@ -108,6 +109,39 @@
     transform: scale(0.1);
     transition: all 1.5s ease-out;
   }
+
+  @media screen and (max-width: 600px) {
+    .modal-content {
+      width: 90%;
+      height: 80vh; /* Ocupa el 80% de la altura de la pantalla */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    #mainContent {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .scratch-wrap {
+      width: 80vw; /* Ancho relativo a la pantalla */
+      height: 80vw; /* Misma altura para mantener la proporción */
+      max-width: 300px; /* Mantiene el tamaño máximo del diseño original */
+      max-height: 300px;
+    }
+
+    #scratchCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    #goodbyeMessage p {
+      font-size: 10vw; /* Tamaño de fuente relativo al ancho de la pantalla */
+    }
+  }
 </style>
 </head>
 <body>
@@ -173,23 +207,6 @@
   const scratchContainer = document.getElementById('scratchContainer');
   const secondAttemptBtn = document.getElementById('secondAttemptBtn');
 
-  // Lleva la vista al inicio de la página y pone el canvas/scratch en primer plano (móvil)
-  function goToTop(){
-    try{
-      // Primero intentamos llevar la ventana al tope
-      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    } catch(e) {
-      // Fallback simple
-      window.scrollTo(0,0);
-    }
-    // Intentar además centrar el contenedor de la raspadita
-    setTimeout(()=>{
-      try{
-        scratchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }catch(e){}
-    }, 120);
-  }
-
   window.addEventListener('DOMContentLoaded', () => {
     modal.style.display = 'flex';
   });
@@ -206,7 +223,7 @@
 
     const userRef = database.ref('users/' + phone);
     userRef.once('value').then((snapshot) => {
-  if (snapshot.exists()) {
+        if (snapshot.exists()) {
         currentUser = snapshot.val();
         // Bloquear si ya agotó intentos o si ganó en la primera tirada
         const wonFirst = currentUser.attempt1_result && currentUser.attempt1_result.indexOf('🎁') !== -1;
@@ -215,8 +232,7 @@
         } else {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
-          // desplazar al inicio para móviles
-          goToTop();
+          window.scrollTo(0, 0);
           // Si ya hizo un intento y no ganó, mostrar segundo intento; en otro caso permitir raspar
           if (currentUser.attempts === 1) {
             secondAttemptBtn.style.display = 'block';
@@ -236,8 +252,6 @@
         userRef.set(currentUser).then(() => {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
-          // desplazar al inicio para móviles
-          goToTop();
           scratchContainer.style.pointerEvents = 'auto';
         });
       }
@@ -268,12 +282,18 @@
   const img = new Image();
   img.src = 'logo.png';
   function resetCanvas(){
+    const container = document.querySelector('.scratch-wrap');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
     ctx.globalCompositeOperation='source-over';
-    ctx.drawImage(img,0,0,300,300);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     prizeText.textContent = 'Pulsa & raspa para descubrir';
   }
 
-  img.onload = resetCanvas;
+  img.onload = () => {
+      resetCanvas();
+      window.addEventListener('resize', resetCanvas);
+  };
 
   let drawing=false;
   let revealed = false;
@@ -304,17 +324,13 @@
     // Limpiar y crear elementos
     goodbyeDiv.innerHTML = '';
     if (hasPrize) {
-      // Solo mostrar el premio ganado: colocarlo arriba y al doble del tamaño anterior
+      // Solo mostrar el premio ganado
   const prizeP = document.createElement('p');
   prizeP.textContent = prize;
   prizeP.style.color = 'gold';
-  // aseguramos que quede en la parte superior del overlay
-  goodbyeDiv.style.alignItems = 'flex-start';
-  goodbyeDiv.style.paddingTop = '4vh';
-  // Mostrar el premio al doble del tamaño anterior
-  prizeP.style.fontSize = '21vw';
-  prizeP.style.margin = '0';
-  prizeP.style.lineHeight = '1';
+  prizeP.style.marginTop = '1rem';
+  // Mostrar el premio 3 veces más grande
+  prizeP.style.fontSize = '10.5vw';
       goodbyeDiv.appendChild(prizeP);
       // animación para el premio
       setTimeout(() => {
@@ -323,9 +339,6 @@
         goodbyeDiv.style.opacity = '1';
       }, 100);
     } else {
-      // Asegurarnos de que el overlay vuelva a la posición centrada cuando no hay premio
-      goodbyeDiv.style.alignItems = 'center';
-      goodbyeDiv.style.paddingTop = '';
       const bigP = document.createElement('p');
       bigP.textContent = 'Gracias por participar';
       goodbyeDiv.appendChild(bigP);
@@ -341,10 +354,10 @@
 
   function checkReveal(){
     if(revealed) return;
-    const imgData = ctx.getImageData(0,0,300,300).data;
+    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height).data;
     let transparent=0;
     for(let i=3;i<imgData.length;i+=4) if(imgData[i]<128) transparent++;
-  if(transparent > 300*300*0.35) {
+  if(transparent > canvas.width*canvas.height*0.35) {
         revealed = true;
         finalizePrize();
     }

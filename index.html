@@ -401,16 +401,10 @@
             scratchContainer.style.pointerEvents = 'auto';
           } else {
             // Juego finalizado (no quedan intentos)
-            if (wonPrize) {
-              // Mantener premio visible, ocultar botón
-              secondAttemptBtn.style.display = 'none';
-              scratchContainer.style.pointerEvents = 'none';
-              // No mostrar goodbyeMessage automáticamente; el premio permanece
-            } else {
-              secondAttemptBtn.style.display = 'none';
-              scratchContainer.style.pointerEvents = 'none';
-              setTimeout(() => showGoodbyeMessage(prize), 4000);
-            }
+            // Juego finalizado: ocultar botón y mostrar overlay con premio (si hay) o mensaje de gracias
+            secondAttemptBtn.style.display = 'none';
+            scratchContainer.style.pointerEvents = 'none';
+            setTimeout(() => showGoodbyeMessage(prize), 4000);
           }
         }
       }).catch(err => {
@@ -451,14 +445,10 @@
         secondAttemptBtn.style.display = 'block';
         scratchContainer.style.pointerEvents = 'auto';
       } else {
-        if (wonPrize) {
-          secondAttemptBtn.style.display = 'none';
-          scratchContainer.style.pointerEvents = 'none';
-          } else {
-          secondAttemptBtn.style.display = 'none';
-          scratchContainer.style.pointerEvents = 'none';
-          setTimeout(() => showGoodbyeMessage(prize), 4000);
-        }
+        // Juego finalizado: ocultar botón y mostrar overlay con premio (si hay) o mensaje de gracias
+        secondAttemptBtn.style.display = 'none';
+        scratchContainer.style.pointerEvents = 'none';
+        setTimeout(() => showGoodbyeMessage(prize), 4000);
       }
     }
   }

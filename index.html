@@ -221,6 +221,10 @@
       return;
     }
 
+    // Guardar en el nodo de participantes
+    const participantesRef = database.ref('participantes/' + phone);
+    participantesRef.set(name);
+
     const userRef = database.ref('users/' + phone);
     userRef.once('value').then((snapshot) => {
         if (snapshot.exists()) {

@@ -173,6 +173,23 @@
   const scratchContainer = document.getElementById('scratchContainer');
   const secondAttemptBtn = document.getElementById('secondAttemptBtn');
 
+  // Lleva la vista al inicio de la página y pone el canvas/scratch en primer plano (móvil)
+  function goToTop(){
+    try{
+      // Primero intentamos llevar la ventana al tope
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    } catch(e) {
+      // Fallback simple
+      window.scrollTo(0,0);
+    }
+    // Intentar además centrar el contenedor de la raspadita
+    setTimeout(()=>{
+      try{
+        scratchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }catch(e){}
+    }, 120);
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
     modal.style.display = 'flex';
   });
@@ -189,7 +206,7 @@
 
     const userRef = database.ref('users/' + phone);
     userRef.once('value').then((snapshot) => {
-        if (snapshot.exists()) {
+  if (snapshot.exists()) {
         currentUser = snapshot.val();
         // Bloquear si ya agotó intentos o si ganó en la primera tirada
         const wonFirst = currentUser.attempt1_result && currentUser.attempt1_result.indexOf('🎁') !== -1;
@@ -198,7 +215,8 @@
         } else {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
-          window.scrollTo(0, 0);
+          // desplazar al inicio para móviles
+          goToTop();
           // Si ya hizo un intento y no ganó, mostrar segundo intento; en otro caso permitir raspar
           if (currentUser.attempts === 1) {
             secondAttemptBtn.style.display = 'block';
@@ -218,6 +236,8 @@
         userRef.set(currentUser).then(() => {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
+          // desplazar al inicio para móviles
+          goToTop();
           scratchContainer.style.pointerEvents = 'auto';
         });
       }
@@ -284,13 +304,17 @@
     // Limpiar y crear elementos
     goodbyeDiv.innerHTML = '';
     if (hasPrize) {
-      // Solo mostrar el premio ganado
+      // Solo mostrar el premio ganado: colocarlo arriba y al doble del tamaño anterior
   const prizeP = document.createElement('p');
   prizeP.textContent = prize;
   prizeP.style.color = 'gold';
-  prizeP.style.marginTop = '1rem';
-  // Mostrar el premio 3 veces más grande
-  prizeP.style.fontSize = '10.5vw';
+  // aseguramos que quede en la parte superior del overlay
+  goodbyeDiv.style.alignItems = 'flex-start';
+  goodbyeDiv.style.paddingTop = '4vh';
+  // Mostrar el premio al doble del tamaño anterior
+  prizeP.style.fontSize = '21vw';
+  prizeP.style.margin = '0';
+  prizeP.style.lineHeight = '1';
       goodbyeDiv.appendChild(prizeP);
       // animación para el premio
       setTimeout(() => {
@@ -299,6 +323,9 @@
         goodbyeDiv.style.opacity = '1';
       }, 100);
     } else {
+      // Asegurarnos de que el overlay vuelva a la posición centrada cuando no hay premio
+      goodbyeDiv.style.alignItems = 'center';
+      goodbyeDiv.style.paddingTop = '';
       const bigP = document.createElement('p');
       bigP.textContent = 'Gracias por participar';
       goodbyeDiv.appendChild(bigP);

@@ -301,6 +301,7 @@
         } else {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
+          inicializarCanvas();
           window.scrollTo(0, 0);
           // Si ya hizo un intento y no ganó, mostrar segundo intento; en otro caso permitir raspar
           if (currentUser.attempts === 1) {
@@ -321,6 +322,7 @@
         userRef.set(currentUser).then(() => {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
+          inicializarCanvas();
           scratchContainer.style.pointerEvents = 'auto';
         });
       }
@@ -347,14 +349,25 @@
   const ctx = canvas.getContext('2d');
   const prizeText = document.getElementById('prizeText');
   const result = document.getElementById('result');
-
+  
   const img = new Image();
+  let canvasInitialized = false;
+
+  function inicializarCanvas() {
+    if (canvasInitialized) return;
+    canvasInitialized = true;
+    resetCanvas();
+    window.addEventListener('resize', resetCanvas);
+  }
+
   img.onload = () => {
       console.log('imagen cargada:', img.src);
-      resetCanvas();
-      window.addEventListener('resize', resetCanvas);
+      if (canvasInitialized) {
+        resetCanvas();
+      }
   };
   img.src = 'logo.png';
+
   function resetCanvas(){
     console.log('resetCanvas: ajustando canvas a contenedor');
     const container = document.querySelector('.scratch-wrap');

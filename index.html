@@ -19,7 +19,7 @@
     height: 300px; 
     margin: auto; 
     border: 2px solid rgb(89, 89, 87);
-    pointer-events: none; /* Bloquear raspadita inicialmente */
+    pointer-events: auto; /* Permitir eventos sobre el contenedor (controlado por JS) */
   }
   #prizeBox { 
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
@@ -27,6 +27,10 @@
     background: #111; color: gold; font-weight: bold; 
   }
   canvas { position: absolute; top:0; left:0; touch-action: none; }
+
+  /* Asegurar que la capa con el texto del premio no intercepte eventos del canvas */
+  #prizeBox { pointer-events: none; }
+  canvas { pointer-events: auto; }
 
   .modal {
     display: flex; 
@@ -289,15 +293,30 @@
   const img = new Image();
   img.src = 'logo.png';
   function resetCanvas(){
+    console.log('resetCanvas: ajustando canvas a contenedor');
     const container = document.querySelector('.scratch-wrap');
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
     ctx.globalCompositeOperation='source-over';
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // Dibujar imagen del logo si ya está cargada; si no, pintar un fondo neutro
+    if (img && img.complete && img.naturalWidth > 0) {
+      try {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      } catch (err) {
+        console.warn('drawImage falló:', err);
+        ctx.fillStyle = '#333';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    } else {
+      console.warn('resetCanvas: imagen no disponible, usando fondo neutro');
+      ctx.fillStyle = '#333';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     prizeText.textContent = 'Gira el movil para activar';
   }
 
   img.onload = () => {
+      console.log('imagen cargada:', img.src);
       resetCanvas();
       window.addEventListener('resize', resetCanvas);
   };
@@ -501,6 +520,9 @@
   }
 
   function startDrawing(e) {
+    // Evitar comportamiento por defecto (scroll) en eventos táctiles
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    console.log('startDrawing fired', e && e.type);
     drawing = true;
     // Al comenzar a raspar, si el texto está en el mensaje inicial, actualizarlo
     if (prizeText && prizeText.textContent && prizeText.textContent.trim() === 'Gira el movil para activar') {
@@ -509,18 +531,33 @@
     let p = getPos(e);
     erase(p.x,p.y);
   }
-  function stopDrawing() { if(drawing){ drawing = false; checkReveal();} }
-  function draw(e) { if(drawing){let p=getPos(e);erase(p.x,p.y);} }
+
+  function stopDrawing() {
+    if (drawing) {
+      console.log('stopDrawing fired');
+      drawing = false;
+      checkReveal();
+    }
+  }
+
+  function draw(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (drawing) {
+      console.log('draw', e && e.type);
+      let p = getPos(e);
+      erase(p.x,p.y);
+    }
+  }
 
   canvas.addEventListener('mousedown', startDrawing);
   canvas.addEventListener('mouseup', stopDrawing);
   canvas.addEventListener('mousemove', draw);
-  canvas.addEventListener('touchstart', startDrawing);
-  canvas.addEventListener('touchend', stopDrawing);
-  canvas.addEventListener('touchmove', draw);
+  canvas.addEventListener('touchstart', startDrawing, { passive: false });
+  canvas.addEventListener('touchend', stopDrawing, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
   // Asegurar que soltar fuera del canvas también detenga el dibujo
   window.addEventListener('mouseup', stopDrawing);
-  window.addEventListener('touchend', stopDrawing);
+  window.addEventListener('touchend', stopDrawing, { passive: false });
 
 </script>
 </body>

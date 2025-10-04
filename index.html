@@ -301,7 +301,7 @@
         } else {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
-          inicializarCanvas();
+          setTimeout(inicializarCanvas, 0);
           window.scrollTo(0, 0);
           // Si ya hizo un intento y no ganó, mostrar segundo intento; en otro caso permitir raspar
           if (currentUser.attempts === 1) {
@@ -322,7 +322,7 @@
         userRef.set(currentUser).then(() => {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
-          inicializarCanvas();
+          setTimeout(inicializarCanvas, 0);
           scratchContainer.style.pointerEvents = 'auto';
         });
       }

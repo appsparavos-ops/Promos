@@ -391,6 +391,7 @@
 
   function finalizePrize(){
     const pick = weightedPick();
+    console.log('finalizePrize: pick=', pick, 'isSecondAttempt=', isSecondAttempt, 'currentUser attempts=', currentUser && currentUser.attempts);
     let prize = '❌ Seguí participando';
 
     // Si el pick sugiere un premio, intentamos reservar uno de forma atómica en /prizes
@@ -402,6 +403,7 @@
         const counts = prizes.counts || {};
         const codes5 = prizes.codes_5 || [];
         const codes10 = prizes.codes_10 || [];
+        console.log('prizes transaction: counts=', counts, 'codes5_len=', codes5.length, 'codes10_len=', codes10.length);
 
         if (pick === '5' && counts.rem5 > 0 && codes5.length > 0) {
           // asignar el primer código disponible
@@ -411,6 +413,7 @@
           prizes.counts = counts;
           prizes._last_assigned = {type: '5', code: code};
           prize = '🎁 5% OFF – Código: ' + code;
+          console.log('Asignando 5% OFF, codigo=', code);
         } else if (pick === '10' && counts.rem10 > 0 && codes10.length > 0) {
           const code = codes10.shift();
           counts.rem10 = Math.max(0, counts.rem10 - 1);
@@ -418,12 +421,15 @@
           prizes.counts = counts;
           prizes._last_assigned = {type: '10', code: code};
           prize = '🎁 10% OFF – Código: ' + code;
+          console.log('Asignando 10% OFF, codigo=', code);
         } else {
           // No hay códigos disponibles para el tipo seleccionado
+          console.log('No hay códigos disponibles para pick=', pick, 'counts=', counts);
           prize = '❌ Seguí participando';
         }
         return prizes;
       }).then(() => {
+        console.log('transaction.then: prize=', prize);
         // Después de la transacción, actualizamos UI y guardamos en el registro del usuario
         prizeText.textContent = prize;
         if (prize.startsWith('🎁')) {
@@ -472,6 +478,8 @@
             scratchContainer.style.pointerEvents = 'none';
             setTimeout(() => showGoodbyeMessage(prize), 4000);
           }
+          // Restablecer flag de segundo intento para futuras interacciones
+          isSecondAttempt = false;
         }
       }).catch(err => {
         console.error('Transaction error:', err);
@@ -516,6 +524,8 @@
         scratchContainer.style.pointerEvents = 'none';
         setTimeout(() => showGoodbyeMessage(prize), 4000);
       }
+      // Restablecer flag de segundo intento para futuras interacciones
+      isSecondAttempt = false;
     }
   }
 

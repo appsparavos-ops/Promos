@@ -349,6 +349,11 @@
   const result = document.getElementById('result');
 
   const img = new Image();
+  img.onload = () => {
+      console.log('imagen cargada:', img.src);
+      resetCanvas();
+      window.addEventListener('resize', resetCanvas);
+  };
   img.src = 'logo.png';
   function resetCanvas(){
     console.log('resetCanvas: ajustando canvas a contenedor');
@@ -372,12 +377,6 @@
     }
     prizeText.textContent = 'Gira el movil para activar';
   }
-
-  img.onload = () => {
-      console.log('imagen cargada:', img.src);
-      resetCanvas();
-      window.addEventListener('resize', resetCanvas);
-  };
 
   let drawing=false;
   let revealed = false;

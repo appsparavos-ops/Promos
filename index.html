@@ -332,6 +332,7 @@
   secondAttemptBtn.addEventListener('click', () => {
     revealed = false;
     isSecondAttempt = true;
+    scratchEventsCount = 0;
     resetCanvas();
     prizeText.textContent = 'Gira el movil para activar';
     scratchContainer.style.pointerEvents = 'auto';
@@ -354,6 +355,13 @@
   const img = new Image();
   let canvasInitialized = false;
 
+  // Throttle para evitar llamadas intensivas a getImageData en escritorio
+  let lastRevealCheck = 0;
+  const REVEAL_CHECK_THROTTLE = 250; // ms
+  // Fallback si getImageData falla (canvas tainted): contar eventos de borrado
+  let scratchEventsCount = 0;
+  const SCRATCH_EVENTS_FALLBACK = 60; // número de eventos erase antes de considerar revelado
+
   function inicializarCanvas() {
     if (canvasInitialized) return;
     canvasInitialized = true;
@@ -371,25 +379,37 @@
   img.src = 'logo.png';
 
   function resetCanvas(){
-    console.log('resetCanvas: ajustando canvas a contenedor');
+    // Ajuste DPI-aware y limpieza de flags
     const container = document.querySelector('.scratch-wrap');
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    ctx.globalCompositeOperation='source-over';
+    const ratio = window.devicePixelRatio || 1;
+    const cssWidth = container.clientWidth;
+    const cssHeight = container.clientHeight;
+    canvas.style.width = cssWidth + 'px';
+    canvas.style.height = cssHeight + 'px';
+    canvas.width = Math.max(1, Math.round(cssWidth * ratio));
+    canvas.height = Math.max(1, Math.round(cssHeight * ratio));
+    // Ajustar transform para que drawImage use coordenadas CSS
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
     // Dibujar imagen del logo si ya está cargada; si no, pintar un fondo neutro
     if (img && img.complete && img.naturalWidth > 0) {
       try {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, cssWidth, cssHeight);
       } catch (err) {
         console.warn('drawImage falló:', err);
         ctx.fillStyle = '#333';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, cssWidth, cssHeight);
       }
     } else {
-      console.warn('resetCanvas: imagen no disponible, usando fondo neutro');
+      // imagen aun no cargada
       ctx.fillStyle = '#333';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, cssWidth, cssHeight);
     }
+    // reset flags
+    revealed = false;
+    scratchEventsCount = 0;
+    lastRevealCheck = 0;
   }
 
   let drawing=false;
@@ -411,6 +431,8 @@
     ctx.beginPath();
     ctx.arc(x,y,20,0,Math.PI*2);
     ctx.fill();
+    // Incrementar contador de eventos para posible fallback
+    scratchEventsCount++;
     // Chequear si ya se reveló suficiente área tras cada borrado
     checkReveal();
   }
@@ -455,13 +477,37 @@
   }
 
   function checkReveal(){
-    if(revealed) return;
-    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height).data;
-    let transparent=0;
-    for(let i=3;i<imgData.length;i+=4) if(imgData[i]<128) transparent++;
-  if(transparent > canvas.width*canvas.height*0.35) {
+    if (revealed) return;
+    // Throttle para evitar bloqueo en PC por llamadas intensivas a getImageData
+    const now = Date.now();
+    if (now - lastRevealCheck < REVEAL_CHECK_THROTTLE) {
+      // Si el fallback por eventos ya alcanza el umbral, revelar
+      if (scratchEventsCount >= SCRATCH_EVENTS_FALLBACK) {
         revealed = true;
         finalizePrize();
+      }
+      return;
+    }
+    lastRevealCheck = now;
+    try {
+      const imgData = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      let transparent=0;
+      for(let i=3;i<imgData.length;i+=4) if(imgData[i]<128) transparent++;
+      if (transparent > canvas.width*canvas.height*0.35) {
+        revealed = true;
+        finalizePrize();
+      } else if (scratchEventsCount >= SCRATCH_EVENTS_FALLBACK) {
+        // Fallback: si hubo muchos eventos de borrado pero no se pudo calcular bien
+        revealed = true;
+        finalizePrize();
+      }
+    } catch (err) {
+      // Si getImageData lanza por canvas tainted o similar, usar fallback por eventos
+      console.warn('checkReveal: getImageData falló, usando fallback por eventos:', err);
+      if (scratchEventsCount >= SCRATCH_EVENTS_FALLBACK) {
+        revealed = true;
+        finalizePrize();
+      }
     }
   }
 
@@ -608,7 +654,6 @@
   function startDrawing(e) {
     // Evitar comportamiento por defecto (scroll) en eventos táctiles
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
-    console.log('startDrawing fired', e && e.type);
     drawing = true;
     // Al comenzar a raspar, si el texto está en el mensaje inicial, actualizarlo
     if (prizeText && prizeText.textContent && prizeText.textContent.trim() === 'Gira el movil para activar') {
@@ -620,7 +665,6 @@
 
   function stopDrawing() {
     if (drawing) {
-      console.log('stopDrawing fired');
       drawing = false;
       checkReveal();
     }
@@ -629,7 +673,6 @@
   function draw(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (drawing) {
-      console.log('draw', e && e.type);
       let p = getPos(e);
       erase(p.x,p.y);
     }

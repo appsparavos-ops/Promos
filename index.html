@@ -2,14 +2,21 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>🍔 Raspadita de Octubre 🍔 - AZ Burger</title>
 <style>
+  /* Asegurar que html y body ocupen toda la pantalla y no permitan scroll en móviles */
+  html, body { height: 100%; overscroll-behavior-y: none; }
+  body { -webkit-touch-callout: none; -webkit-user-select: none; -ms-user-select: none; user-select: none; }
   body {
     background: #000;
     color: #fff;
     font-family: Arial, sans-serif;
     text-align: center;
     overflow: hidden; /* Evita el scroll en la página */
+    margin: 0;
+    padding: 0;
+    touch-action: manipulation;
   }
   h1 { color: #e74c3c; }
   .muted { font-size: 13px; color: #aaa; }
@@ -20,6 +27,11 @@
     margin: auto; 
     border: 2px solid rgb(89, 89, 87);
     pointer-events: auto; /* Permitir eventos sobre el contenedor (controlado por JS) */
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
   }
   #prizeBox { 
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
@@ -35,25 +47,32 @@
   .modal {
     display: flex; 
     position: fixed; 
-    z-index: 1; 
+    z-index: 9999; 
     left: 0;
     top: 0;
-    width: 100%; 
-    height: 100%; 
-    overflow: auto; 
-    background-color: rgba(0,0,0,0.7); 
+    width: 100vw; 
+    height: 100vh; 
+    overflow: hidden; 
+    background-color: rgba(0,0,0,0.85); 
     justify-content: center;
     align-items: center;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
   }
 
   .modal-content {
     background-color: #333;
-    padding: 20px;
+    padding: 14px;
     border: 1px solid #888;
     width: 80%;
-    max-width: 400px;
-    border-radius: 10px;
+    max-width: 600px;
+    border-radius: 12px;
     text-align: center;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
 
   #userForm input {
@@ -113,26 +132,36 @@
   }
 
   @media screen and (max-width: 600px) {
+    /* Modal grande y centrado, sin scroll */
     .modal-content {
-      width: 98%;
-      height: 95vh; /* Ocupa el 95% de la altura de la pantalla */
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+      width: 98vw;
+      height: 98vh; /* Ocupa casi toda la pantalla */
+      max-width: 98vw;
+      max-height: 98vh;
+      border-radius: 8px;
+      padding: 8px;
     }
 
+    /* Centrar main content y hacerlo full-screen */
     #mainContent {
       height: 100vh;
+      width: 100vw;
       display: flex;
       flex-direction: column;
       justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+      padding: 8px;
     }
 
+    /* Hacer la raspadita tan grande como quepa en pantalla (cuadrada) */
     .scratch-wrap {
-      width: 80vw; /* Ancho relativo a la pantalla */
-      height: 80vw; /* Misma altura para mantener la proporción */
-      max-width: 300px; /* Mantiene el tamaño máximo del diseño original */
-      max-height: 300px;
+      width: 90vw; /* Ancho relativo a la pantalla */
+      height: 90vw; /* Mantener proporción cuadrada */
+      max-width: 96vh; /* asegurar que entre en altura */
+      max-height: 96vh;
+      border-radius: 8px;
+      overflow: hidden;
     }
 
     #scratchCanvas {
@@ -140,8 +169,23 @@
       height: 100%;
     }
 
+    /* Mensaje de despedida grande y centrado */
+    #goodbyeMessage {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+      top: 0;
+      left: 0;
+      padding: 0;
+    }
+
     #goodbyeMessage p {
-      font-size: 10vw; /* Tamaño de fuente relativo al ancho de la pantalla */
+      font-size: 12vw; /* Muy grande */
+      text-align: center;
+      margin: 0;
+      transform: scale(1);
     }
   }
 </style>

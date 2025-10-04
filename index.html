@@ -301,6 +301,7 @@
         } else {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
+          setTimeout(inicializarCanvas, 0);
           window.scrollTo(0, 0);
           // Si ya hizo un intento y no ganó, mostrar segundo intento; en otro caso permitir raspar
           if (currentUser.attempts === 1) {
@@ -321,6 +322,7 @@
         userRef.set(currentUser).then(() => {
           modal.style.display = 'none';
           document.getElementById('mainContent').style.display = 'block';
+          setTimeout(inicializarCanvas, 0);
           scratchContainer.style.pointerEvents = 'auto';
         });
       }
@@ -331,6 +333,7 @@
     revealed = false;
     isSecondAttempt = true;
     resetCanvas();
+    prizeText.textContent = 'Gira el movil para activar';
     scratchContainer.style.pointerEvents = 'auto';
     secondAttemptBtn.style.display = 'none';
     result.textContent = '';
@@ -347,9 +350,26 @@
   const ctx = canvas.getContext('2d');
   const prizeText = document.getElementById('prizeText');
   const result = document.getElementById('result');
-
+  
   const img = new Image();
+  let canvasInitialized = false;
+
+  function inicializarCanvas() {
+    if (canvasInitialized) return;
+    canvasInitialized = true;
+    prizeText.textContent = 'Gira el movil para activar';
+    resetCanvas();
+    window.addEventListener('resize', resetCanvas);
+  }
+
+  img.onload = () => {
+      console.log('imagen cargada:', img.src);
+      if (canvasInitialized) {
+        resetCanvas();
+      }
+  };
   img.src = 'logo.png';
+
   function resetCanvas(){
     console.log('resetCanvas: ajustando canvas a contenedor');
     const container = document.querySelector('.scratch-wrap');
@@ -370,14 +390,7 @@
       ctx.fillStyle = '#333';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    prizeText.textContent = 'Gira el movil para activar';
   }
-
-  img.onload = () => {
-      console.log('imagen cargada:', img.src);
-      resetCanvas();
-      window.addEventListener('resize', resetCanvas);
-  };
 
   let drawing=false;
   let revealed = false;
@@ -385,7 +398,12 @@
   function getPos(e){
     const rect = canvas.getBoundingClientRect();
     let event = e.touches ? e.touches[0] : e;
-    return {x:(event.clientX-rect.left),y:(event.clientY-rect.top)};
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (event.clientX - rect.left) * scaleX,
+      y: (event.clientY - rect.top) * scaleY
+    };
   }
 
   function erase(x,y){

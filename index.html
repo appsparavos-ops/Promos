@@ -205,7 +205,7 @@
       <p>Por favor, regístrate para jugar.</p>
       <form id="userForm">
         <input type="text" id="userName" placeholder="Nombre y Apellido" required>
-        <input type="tel" id="userPhone" placeholder="Número de Teléfono" required>
+  <input type="tel" id="userPhone" placeholder="Número de Teléfono (9 dígitos)" required inputmode="numeric" pattern="\d{9}" minlength="9" maxlength="9" title="Ingrese 9 dígitos" />
         <button type="submit">Jugar</button>
       </form>
     </div>
@@ -268,11 +268,18 @@
 
   userForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const phone = userPhoneInput.value;
-    const name = userNameInput.value;
+    // Obtener y sanitizar el teléfono: solo dígitos
+    let phone = (userPhoneInput.value || '').toString();
+    const name = (userNameInput.value || '').toString().trim();
+    phone = phone.replace(/\D/g, ''); // quitar espacios, guiones, paréntesis
 
     if (!phone || !name) {
       alert('Por favor, completa todos los campos.');
+      return;
+    }
+
+    if (phone.length !== 9) {
+      alert('Ingrese un número de teléfono válido de 9 dígitos (solo números).');
       return;
     }
 

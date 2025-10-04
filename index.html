@@ -221,6 +221,13 @@
       return;
     }
 
+    // Guardar en la nueva ruta clientes/{telefono}
+    const clienteRef = database.ref('clientes/' + phone);
+    clienteRef.set({
+      nombre: name,
+      telefono: phone
+    });
+
     const userRef = database.ref('users/' + phone);
     userRef.once('value').then((snapshot) => {
         if (snapshot.exists()) {

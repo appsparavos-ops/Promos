@@ -3,8 +3,6 @@
 <head>
 <meta charset="utf-8">
 <title>🍔 Raspadita de Octubre 🍔 - AZ Burger</title>
-<script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-database-compat.js"></script>
 <style>
   body {
     background: #000;
@@ -162,7 +160,7 @@
     <h1>🍔 Raspadita de Octubre 🍔</h1>
     <p>Sigue a <b>@azburgerhouse</b> en Instagram para jugar</p>
     <div id="scratchContainer" class="scratch-wrap">
-      <div id="prizeBox"><div id="prizeText">Pulsa & raspa para descubrir</div></div>
+      <div id="prizeBox"><div id="prizeText">Cargando...</div></div>
       <canvas id="scratchCanvas" width="300" height="300"></canvas>
     </div>
 
@@ -180,6 +178,8 @@
     <p>Gracias por participar</p>
   </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-database-compat.js"></script>
 <script>
   // Configuración de Firebase
   const firebaseConfig = {
@@ -220,6 +220,13 @@
       alert('Por favor, completa todos los campos.');
       return;
     }
+
+    // Guardar en la nueva ruta clientes/{telefono}
+    const clienteRef = database.ref('clientes/' + phone);
+    clienteRef.set({
+      nombre: name,
+      telefono: phone
+    });
 
     const userRef = database.ref('users/' + phone);
     userRef.once('value').then((snapshot) => {

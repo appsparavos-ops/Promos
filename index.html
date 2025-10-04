@@ -110,8 +110,8 @@
 
   @media screen and (max-width: 600px) {
     .modal-content {
-      width: 90%;
-      height: 80vh; /* Ocupa el 80% de la altura de la pantalla */
+      width: 98%;
+      height: 95vh; /* Ocupa el 95% de la altura de la pantalla */
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -294,7 +294,7 @@
     canvas.height = container.clientHeight;
     ctx.globalCompositeOperation='source-over';
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    prizeText.textContent = 'Pulsa & raspa para descubrir';
+    prizeText.textContent = 'Gira el movil para activar';
   }
 
   img.onload = () => {
@@ -337,7 +337,7 @@
   prizeP.style.color = 'gold';
   prizeP.style.marginTop = '1rem';
   // Mostrar el premio 3 veces más grande
-  prizeP.style.fontSize = '10.5vw';
+  prizeP.style.fontSize = '21vw';
       goodbyeDiv.appendChild(prizeP);
       // animación para el premio
       setTimeout(() => {
@@ -500,7 +500,15 @@
     }
   }
 
-  function startDrawing(e) { drawing = true; let p=getPos(e); erase(p.x,p.y); }
+  function startDrawing(e) {
+    drawing = true;
+    // Al comenzar a raspar, si el texto está en el mensaje inicial, actualizarlo
+    if (prizeText && prizeText.textContent && prizeText.textContent.trim() === 'Gira el movil para activar') {
+      prizeText.textContent = 'Sigue raspando';
+    }
+    let p = getPos(e);
+    erase(p.x,p.y);
+  }
   function stopDrawing() { if(drawing){ drawing = false; checkReveal();} }
   function draw(e) { if(drawing){let p=getPos(e);erase(p.x,p.y);} }
 

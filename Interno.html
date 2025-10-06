@@ -303,30 +303,50 @@
                     });
                 } else {
                     // --- Lógica para DESMARCAR como pagado ---
-                    if (confirm(`¿Estás seguro de que quieres desmarcar este premio? \n\nEsta acción eliminará el registro del usuario de la sección "pagados", pero se mantendrá en el historial.`)) {
-                        const estadoAnteriorRef = database.ref(`/users/${userPhone}/estadoPremioAnterior`);
+                    if (confirm(`¿Estás seguro de que quieres desmarcar este premio? \n\nEsta acción eliminará el registro del usuario de la sección "pagados" Y del historial.`)) {
+                        const historyRef = database.ref('historial_premios_cobrados');
+                        
+                        // 1. Buscar y eliminar del historial
+                        historyRef.orderByChild('userPhone').equalTo(userPhone).once('value')
+                            .then(snapshot => {
+                                let historyKeyToRemove = null;
+                                snapshot.forEach(childSnapshot => {
+                                    const historyEntry = childSnapshot.val();
+                                    if (historyEntry.attempt === attemptNumber) {
+                                        historyKeyToRemove = childSnapshot.key;
+                                    }
+                                });
 
-                        // Leer el estado anterior para restaurarlo
-                        estadoAnteriorRef.once('value').then(snapshot => {
-                            const estadoAnterior = snapshot.val();
-
-                            const updates = {};
-                            // Actualizaciones solicitadas por el usuario
-                            updates[`/users/${userPhone}/estadoPremio`] = estadoAnterior;
-                            // Actualización existente
-                            updates[`/users/${userPhone}/attempt${attemptNumber}_claimed`] = false;
-
-                            return database.ref().update(updates);
-                        }).then(() => {
-                            console.log(`Premio ${attemptNumber} del usuario ${userPhone} revertido y estado restaurado.`);
-                            const pagadosRef = database.ref('pagados/' + userPhone);
-                            return pagadosRef.remove();
-                        }).then(() => {
-                            console.log(`Usuario ${userPhone} eliminado de /pagados.`);
-                        }).catch((error) => {
-                            console.error("Error al desmarcar como pagado: ", error);
-                            checkbox.checked = true; // Revertir en caso de error
-                        });
+                                if (historyKeyToRemove) {
+                                    return historyRef.child(historyKeyToRemove).remove();
+                                }
+                            })
+                            .then(() => {
+                                console.log(`Entrada de historial para ${userPhone}, intento ${attemptNumber} eliminada.`);
+                                // 2. Restaurar estado previo
+                                const estadoAnteriorRef = database.ref(`/users/${userPhone}/estadoPremioAnterior`);
+                                return estadoAnteriorRef.once('value');
+                            })
+                            .then(snapshot => {
+                                const estadoAnterior = snapshot.val();
+                                const updates = {};
+                                updates[`/users/${userPhone}/estadoPremio`] = estadoAnterior;
+                                updates[`/users/${userPhone}/attempt${attemptNumber}_claimed`] = false;
+                                return database.ref().update(updates);
+                            })
+                            .then(() => {
+                                console.log(`Premio ${attemptNumber} del usuario ${userPhone} revertido y estado restaurado.`);
+                                // 3. Eliminar de /pagados
+                                const pagadosRef = database.ref('pagados/' + userPhone);
+                                return pagadosRef.remove();
+                            })
+                            .then(() => {
+                                console.log(`Usuario ${userPhone} eliminado de /pagados.`);
+                            })
+                            .catch((error) => {
+                                console.error("Error al desmarcar como pagado: ", error);
+                                checkbox.checked = true; // Revertir en caso de error
+                            });
                     } else {
                         // Si el usuario cancela, revertir el checkbox
                         checkbox.checked = true;

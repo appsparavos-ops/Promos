@@ -253,59 +253,80 @@
                 if (!userPhone || !attemptNumber) return;
 
                 if (isChecked) {
-                    // --- Lógica para MARCAR como pagado ---
-                    const updatePath = `/users/${userPhone}/attempt${attemptNumber}_claimed`;
-                    database.ref(updatePath).set(true)
-                        .then(() => {
-                            console.log(`Premio ${attemptNumber} del usuario ${userPhone} actualizado a: PAGADO`);
-                            const row = checkbox.closest('tr');
-                            const userName = row.cells[0].textContent;
-                            const prizeCellIndex = attemptNumber === '1' ? 3 : 5;
-                            const prize = row.cells[prizeCellIndex].textContent;
-                            
-                            const historyRef = database.ref('historial_premios_cobrados');
-                            const newHistoryEntry = {
-                                userName: userName,
-                                userPhone: userPhone,
-                                prize: prize,
-                                claimedAt: new Date().toISOString(),
-                                attempt: attemptNumber
-                            };
+                    const estadoPremioRef = database.ref(`/users/${userPhone}/estadoPremio`);
+                    
+                    // Primero, leer el estado actual para respaldarlo
+                    estadoPremioRef.once('value').then(snapshot => {
+                        const estadoActual = snapshot.val();
 
-                            // Guardar en historial y luego en pagados
-                            return historyRef.push(newHistoryEntry).then(() => {
-                                const userData = allUsersData[userPhone];
-                                if (userData) {
-                                    console.log(`Copiando usuario ${userPhone} a /pagados.`);
-                                    const pagadosRef = database.ref('pagados/' + userPhone);
-                                    return pagadosRef.set(userData);
-                                }
-                            });
-                        })
-                        .then(() => {
-                            console.log('Historial y estado de pagado guardados exitosamente.');
-                        })
-                        .catch((error) => {
-                            console.error("Error al marcar como pagado: ", error);
-                            checkbox.checked = false; // Revertir en caso de error
+                        const updates = {};
+                        // Actualizaciones solicitadas por el usuario
+                        updates[`/users/${userPhone}/estadoPremioAnterior`] = estadoActual;
+                        updates[`/users/${userPhone}/estadoPremio`] = 'canjeado';
+                        // Actualización existente
+                        updates[`/users/${userPhone}/attempt${attemptNumber}_claimed`] = true;
+
+                        // Realizar todas las actualizaciones juntas
+                        return database.ref().update(updates);
+                    }).then(() => {
+                        console.log(`Premio ${attemptNumber} del usuario ${userPhone} actualizado y estado respaldado.`);
+                        // ... resto de la lógica de historial y /pagados ...
+                        const row = checkbox.closest('tr');
+                        const userName = row.cells[0].textContent;
+                        const prizeCellIndex = attemptNumber === '1' ? 3 : 5;
+                        const prize = row.cells[prizeCellIndex].textContent;
+                        
+                        const historyRef = database.ref('historial_premios_cobrados');
+                        const newHistoryEntry = {
+                            userName: userName,
+                            userPhone: userPhone,
+                            prize: prize,
+                            claimedAt: new Date().toISOString(),
+                            attempt: attemptNumber
+                        };
+
+                        return historyRef.push(newHistoryEntry).then(() => {
+                            const userData = allUsersData[userPhone];
+                            if (userData) {
+                                console.log(`Copiando usuario ${userPhone} a /pagados.`);
+                                const pagadosRef = database.ref('pagados/' + userPhone);
+                                // Asegurarse de que los datos copiados incluyan el estado 'canjeado'
+                                const updatedUserData = { ...userData, estadoPremio: 'canjeado', [`attempt${attemptNumber}_claimed`]: true };
+                                return pagadosRef.set(updatedUserData);
+                            }
                         });
+                    }).then(() => {
+                        console.log('Historial y estado de pagado guardados exitosamente.');
+                    }).catch((error) => {
+                        console.error("Error al marcar como pagado: ", error);
+                        checkbox.checked = false; // Revertir en caso de error
+                    });
                 } else {
                     // --- Lógica para DESMARCAR como pagado ---
                     if (confirm(`¿Estás seguro de que quieres desmarcar este premio? \n\nEsta acción eliminará el registro del usuario de la sección "pagados", pero se mantendrá en el historial.`)) {
-                        const updatePath = `/users/${userPhone}/attempt${attemptNumber}_claimed`;
-                        database.ref(updatePath).set(false)
-                            .then(() => {
-                                console.log(`Premio ${attemptNumber} del usuario ${userPhone} actualizado a: NO PAGADO`);
-                                const pagadosRef = database.ref('pagados/' + userPhone);
-                                return pagadosRef.remove();
-                            })
-                            .then(() => {
-                                console.log(`Usuario ${userPhone} eliminado de /pagados.`);
-                            })
-                            .catch((error) => {
-                                console.error("Error al desmarcar como pagado: ", error);
-                                checkbox.checked = true; // Revertir en caso de error
-                            });
+                        const estadoAnteriorRef = database.ref(`/users/${userPhone}/estadoPremioAnterior`);
+
+                        // Leer el estado anterior para restaurarlo
+                        estadoAnteriorRef.once('value').then(snapshot => {
+                            const estadoAnterior = snapshot.val();
+
+                            const updates = {};
+                            // Actualizaciones solicitadas por el usuario
+                            updates[`/users/${userPhone}/estadoPremio`] = estadoAnterior;
+                            // Actualización existente
+                            updates[`/users/${userPhone}/attempt${attemptNumber}_claimed`] = false;
+
+                            return database.ref().update(updates);
+                        }).then(() => {
+                            console.log(`Premio ${attemptNumber} del usuario ${userPhone} revertido y estado restaurado.`);
+                            const pagadosRef = database.ref('pagados/' + userPhone);
+                            return pagadosRef.remove();
+                        }).then(() => {
+                            console.log(`Usuario ${userPhone} eliminado de /pagados.`);
+                        }).catch((error) => {
+                            console.error("Error al desmarcar como pagado: ", error);
+                            checkbox.checked = true; // Revertir en caso de error
+                        });
                     } else {
                         // Si el usuario cancela, revertir el checkbox
                         checkbox.checked = true;

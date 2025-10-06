@@ -51,7 +51,7 @@
     left: 0;
     top: 0;
     width: 100vw; 
-    height: 100vh; 
+    height: 50vh; 
     overflow: hidden; 
     background-color: rgba(0,0,0,0.85); 
     justify-content: center;
@@ -529,6 +529,9 @@
           const attemptsAfter = currentUser.attempts + 1;
           updates['/users/' + currentUser.phone + '/attempts'] = attemptsAfter;
           updates['/users/' + currentUser.phone + '/' + attemptField] = prize;
+          if (prize.startsWith('🎁')) {
+            updates['/users/' + currentUser.phone + '/estadoPremio'] = 'otorgado';
+          }
           database.ref().update(updates);
 
           // Si hay premio (incluye código), registrar ganador globalmente
@@ -582,6 +585,9 @@
       const attemptsAfter = currentUser.attempts + 1;
       updates['/users/' + currentUser.phone + '/attempts'] = attemptsAfter;
       updates['/users/' + currentUser.phone + '/' + attemptField] = prize;
+      if (prize.startsWith('🎁')) {
+        updates['/users/' + currentUser.phone + '/estadoPremio'] = 'otorgado';
+      }
       database.ref().update(updates);
 
       // Registrar ganador si corresponde

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador de Premios QR</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #e74c3c;
+            text-align: center;
+        }
+        #qr-reader {
+            width: 90vw;
+            max-width: 500px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        #result-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            flex-direction: column; /* Para apilar el ícono y el texto */
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        #result-message {
+            font-size: 5vw;
+            color: white;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .result-icon {
+            font-size: 25vw;
+            animation: pop-in 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        #result-tick {
+            color: #28a745; /* Verde */
+        }
+        #result-cross {
+            color: #e74c3c; /* Rojo */
+        }
+        #scan-status {
+            margin-top: 15px;
+            font-size: 16px;
+            color: #555;
+            text-align: center;
+            min-height: 24px;
+        }
+        #reset-button {
+            margin-top: 20px;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+        }
+
+        @keyframes pop-in {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-database-compat.js"></script>
+    <!-- Librería para escanear QR -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+
+    <h1>🍔 Verificador de Premios 🍔</h1>
+    <div id="debug-output" style="margin-top: 10px; padding: 10px; background-color: #fff; border: 1px solid #ccc; max-width: 500px; width: 90vw; word-wrap: break-word; text-align: center; box-sizing: border-box;">
+        QR leído: (esperando...)
+    </div>
+    <div id="qr-reader"></div>
+    <div id="scan-status">Apunte la cámara al código QR del premio...</div>
+    <button id="reset-button" style="display: none;">Escanear Otro Premio</button>
+
+    <div id="result-container">
+        <span id="result-tick" class="result-icon" style="display: none;">✔️</span>
+        <span id="result-cross" class="result-icon" style="display: none;">❌</span>
+        <p id="result-message"></p>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script src="verificador.js" defer></script>
+</body>
+</html>

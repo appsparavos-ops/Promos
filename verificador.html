@@ -40,8 +40,15 @@
             display: none; /* Oculto por defecto */
             justify-content: center;
             align-items: center;
+            flex-direction: column; /* Para apilar el ícono y el texto */
             z-index: 1000;
             backdrop-filter: blur(5px);
+        }
+        #result-message {
+            font-size: 5vw;
+            color: white;
+            margin-top: 20px;
+            text-align: center;
         }
         .result-icon {
             font-size: 25vw;
@@ -102,6 +109,7 @@
     <div id="result-container">
         <span id="result-tick" class="result-icon" style="display: none;">✔️</span>
         <span id="result-cross" class="result-icon" style="display: none;">❌</span>
+        <p id="result-message"></p>
     </div>
 
     <script>
@@ -126,6 +134,7 @@
         const resultCross = document.getElementById('result-cross');
         const scanStatus = document.getElementById('scan-status');
         const resetButton = document.getElementById('reset-button');
+        const resultMessage = document.getElementById('result-message');
 
         let isProcessing = false; // Flag para evitar escaneos múltiples
         let html5QrcodeScanner; // Declarar la variable aquí para que sea accesible globalmente
@@ -163,9 +172,10 @@
                 }).then(result => {
                     if (result.committed) {
                         // Transacción exitosa: el premio se guardó.
-                        scanStatus.textContent = "Premio canjeado con éxito.";
+                        resultMessage.textContent = "Premio canjeado con éxito.";
                         resultTick.style.display = 'block';
                         resultCross.style.display = 'none';
+                        console.log('Firebase: ¡Transacción exitosa! El premio se guardó.');
 
                         // --- INICIO: Lógica para actualizar el estado del usuario ---
                         // Extraer el código del premio para buscar al usuario.
@@ -188,15 +198,16 @@
                         // --- FIN: Lógica para actualizar el estado del usuario ---
                     } else {
                         // Transacción abortada: el premio ya existía.
-                        scanStatus.textContent = "¡ATENCIÓN! Este premio ya fue canjeado.";
+                        resultMessage.textContent = "¡ATENCIÓN! Este premio ya fue canjeado.";
                         resultTick.style.display = 'none';
                         resultCross.style.display = 'block';
+                        console.log('Firebase: La transacción fue abortada (el premio ya existía).');
                     }
                     resultContainer.style.display = 'flex';
                     resetButton.style.display = 'block';
                 }).catch(error => {
                     console.error("Error en la transacción de Firebase:", error);
-                    scanStatus.textContent = "Error al verificar el premio. Intenta de nuevo.";
+                    resultMessage.textContent = "Error al verificar el premio. Intenta de nuevo.";
                     isProcessing = false; // Permitir reintentar si hay error
                     resetButton.style.display = 'block'; // Mostrar botón para reiniciar
                 });
@@ -221,6 +232,7 @@
         resetButton.addEventListener('click', () => {
             resultContainer.style.display = 'none';
             resetButton.style.display = 'none';
+            resultMessage.textContent = ''; // Limpiar el mensaje de resultado
             scanStatus.textContent = "Apunte la cámara al código QR del premio...";
             isProcessing = false;
             startScanner(); // Reinicia el escáner para una nueva lectura

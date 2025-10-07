@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- Inicializar Firebase ---
     firebase.initializeApp(firebaseConfig);
@@ -28,7 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
         html5QrcodeScanner.clear().then(() => {
             // Usamos btoa para codificar el texto del premio en Base64.
             // Esto crea una clave válida para Firebase, evitando problemas con caracteres como '.', '#', '$', '[', o ']'.
-            const prizeKey = btoa(decodedText);
+            // ¡CORRECCIÓN! Se usa unescape(encodeURIComponent()) para manejar correctamente caracteres UTF-8 (como ñ, á, etc.) antes de codificar a Base64.
+            const prizeKey = btoa(unescape(encodeURIComponent(decodedText)));
             const canjeadosRef = database.ref('canjeados/' + prizeKey);
 
             canjeadosRef.transaction(currentData => {

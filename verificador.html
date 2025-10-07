@@ -207,7 +207,9 @@
                     resetButton.style.display = 'block';
                 }).catch(error => {
                     console.error("Error en la transacción de Firebase:", error);
-                    resultMessage.textContent = "Error al verificar el premio. Intenta de nuevo.";
+                    // Mostramos el error en la pantalla principal para que sea visible.
+                    resultMessage.textContent = `Error de Firebase: ${error.message}`;
+                    resultContainer.style.display = 'flex'; // Mostramos el contenedor de resultado con el error.
                     isProcessing = false; // Permitir reintentar si hay error
                     resetButton.style.display = 'block'; // Mostrar botón para reiniciar
                 });

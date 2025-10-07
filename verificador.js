@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- Inicializar Firebase ---
     firebase.initializeApp(firebaseConfig);
@@ -27,8 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
         html5QrcodeScanner.clear().then(() => {
             // Usamos btoa para codificar el texto del premio en Base64.
             // Esto crea una clave válida para Firebase, evitando problemas con caracteres como '.', '#', '$', '[', o ']'.
-            // ¡CORRECCIÓN! Se usa unescape(encodeURIComponent()) para manejar correctamente caracteres UTF-8 (como ñ, á, etc.) antes de codificar a Base64.
+            // Se necesita un escape/unescape para que btoa pueda manejar caracteres Unicode como los emojis (🎁).
             const prizeKey = btoa(unescape(encodeURIComponent(decodedText)));
+
             const canjeadosRef = database.ref('canjeados/' + prizeKey);
 
             canjeadosRef.transaction(currentData => {
@@ -78,12 +80,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     resultCross.style.display = 'block';
                     console.log('Firebase: La transacción fue abortada (el premio ya existía).');
                 }
+                // Mostrar el contenedor del resultado y el botón de reseteo.
                 resultContainer.style.display = 'flex';
                 resetButton.style.display = 'block';
+
             }).catch(error => {
                 console.error("Error en la transacción de Firebase:", error);
                 // Mostramos el error en la pantalla principal para que sea visible.
                 resultMessage.textContent = `Error de Firebase: ${error.message}`;
+                resultCross.style.display = 'block';
                 resultContainer.style.display = 'flex'; // Mostramos el contenedor de resultado con el error.
                 isProcessing = false; // Permitir reintentar si hay error
                 resetButton.style.display = 'block'; // Mostrar botón para reiniciar

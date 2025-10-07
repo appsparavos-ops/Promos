@@ -104,7 +104,7 @@
     <script>
         // --- Configuración de Firebase (copiada de tus otros archivos) ---
         const firebaseConfig = {
-            apiKey: "AIzaSyDBExMYIefz4OXCZ7pLF6vy0sfZp7ergo",
+            apiKey: "AIzaSyDBExMYiIefz4OXCZ7pLF6vy0sfZp7ergo",
             authDomain: "azburguer-c512b.firebaseapp.com",
             databaseURL: "https://azburguer-c512b-default-rtdb.firebaseio.com",
             projectId: "azburguer-c512b",
@@ -143,12 +143,14 @@
                 canjeadosRef.transaction(currentData => {
                     if (currentData === null) {
                         // El premio no existe, así que lo guardamos.
-                        return { 
+                        return {
                             prize: decodedText,
                             redeemedAt: new Date().toISOString()
                         };
                     } else {
                         // El premio ya existe, la transacción se aborta.
+                        // Devolvemos los datos actuales para indicar que ya existe.
+                        // Esto es más informativo que devolver 'undefined'.
                         return; // undefined
                     }
                 }).then(result => {
@@ -157,6 +159,26 @@
                         scanStatus.textContent = "Premio canjeado con éxito.";
                         resultTick.style.display = 'block';
                         resultCross.style.display = 'none';
+
+                        // --- INICIO: Lógica para actualizar el estado del usuario ---
+                        // Extraer el código del premio para buscar al usuario.
+                        const prizeCode = decodedText.includes('Código:') ? decodedText.split('Código:')[1].trim() : null;
+                        if (prizeCode) {
+                            database.ref('users').orderByChild('attempt1_result').equalTo(decodedText).once('value', snapshot => {
+                                if (snapshot.exists()) {
+                                    const userId = Object.keys(snapshot.val())[0];
+                                    database.ref(`users/${userId}`).update({ estadoPremio: 'canjeado' });
+                                } else {
+                                    database.ref('users').orderByChild('attempt2_result').equalTo(decodedText).once('value', snapshot2 => {
+                                        if (snapshot2.exists()) {
+                                            const userId2 = Object.keys(snapshot2.val())[0];
+                                            database.ref(`users/${userId2}`).update({ estadoPremio: 'canjeado' });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        // --- FIN: Lógica para actualizar el estado del usuario ---
                     } else {
                         // Transacción abortada: el premio ya existía.
                         scanStatus.textContent = "¡ATENCIÓN! Este premio ya fue canjeado.";

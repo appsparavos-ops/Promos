@@ -132,44 +132,48 @@
             isProcessing = true;
             scanStatus.textContent = "Procesando premio...";
 
-            // Usamos btoa para codificar el texto del premio en Base64.
-            // Esto crea una clave válida para Firebase, evitando problemas con caracteres como '.', '#', '$', '[', o ']'.
-            const prizeKey = btoa(decodedText);
-            const canjeadosRef = database.ref('canjeados/' + prizeKey);
+            // Detenemos el escáner visualmente para que el usuario sepa que se está procesando.
+            // Esto es importante para que la cámara se apague y no siga escaneando.
+            html5QrcodeScanner.clear().then(() => {
+                // Usamos btoa para codificar el texto del premio en Base64.
+                // Esto crea una clave válida para Firebase, evitando problemas con caracteres como '.', '#', '$', '[', o ']'.
+                const prizeKey = btoa(decodedText);
+                const canjeadosRef = database.ref('canjeados/' + prizeKey);
 
-            canjeadosRef.transaction(currentData => {
-                if (currentData === null) {
-                    // El premio no existe, así que lo guardamos.
-                    return { 
-                        prize: decodedText,
-                        redeemedAt: new Date().toISOString()
-                    };
-                } else {
-                    // El premio ya existe, la transacción se aborta.
-                    return; // undefined
-                }
-            }).then(result => {
-                if (result.committed) {
-                    // Transacción exitosa: el premio se guardó.
-                    scanStatus.textContent = "Premio canjeado con éxito.";
-                    resultTick.style.display = 'block';
-                    resultCross.style.display = 'none';
-                } else {
-                    // Transacción abortada: el premio ya existía.
-                    scanStatus.textContent = "¡ATENCIÓN! Este premio ya fue canjeado.";
-                    resultTick.style.display = 'none';
-                    resultCross.style.display = 'block';
-                }
-                resultContainer.style.display = 'flex';
-                resetButton.style.display = 'block';
-                // Detenemos el escáner por completo después de un resultado
-                html5QrcodeScanner.clear().catch(error => {
-                    console.error("Fallo al limpiar el escáner QR.", error);
+                canjeadosRef.transaction(currentData => {
+                    if (currentData === null) {
+                        // El premio no existe, así que lo guardamos.
+                        return { 
+                            prize: decodedText,
+                            redeemedAt: new Date().toISOString()
+                        };
+                    } else {
+                        // El premio ya existe, la transacción se aborta.
+                        return; // undefined
+                    }
+                }).then(result => {
+                    if (result.committed) {
+                        // Transacción exitosa: el premio se guardó.
+                        scanStatus.textContent = "Premio canjeado con éxito.";
+                        resultTick.style.display = 'block';
+                        resultCross.style.display = 'none';
+                    } else {
+                        // Transacción abortada: el premio ya existía.
+                        scanStatus.textContent = "¡ATENCIÓN! Este premio ya fue canjeado.";
+                        resultTick.style.display = 'none';
+                        resultCross.style.display = 'block';
+                    }
+                    resultContainer.style.display = 'flex';
+                    resetButton.style.display = 'block';
+                }).catch(error => {
+                    console.error("Error en la transacción de Firebase:", error);
+                    scanStatus.textContent = "Error al verificar el premio. Intenta de nuevo.";
+                    isProcessing = false; // Permitir reintentar si hay error
+                    resetButton.style.display = 'block'; // Mostrar botón para reiniciar
                 });
             }).catch(error => {
-                console.error("Error en la transacción de Firebase:", error);
-                scanStatus.textContent = "Error al verificar el premio. Intenta de nuevo.";
-                isProcessing = false;
+                 console.error("Fallo al limpiar el escáner QR.", error);
+                 isProcessing = false; // Si no se puede limpiar, permitir reintentar
             });
         }
 

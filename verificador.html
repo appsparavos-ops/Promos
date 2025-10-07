@@ -125,11 +125,11 @@
         const resetButton = document.getElementById('reset-button');
 
         let isProcessing = false; // Flag para evitar escaneos múltiples
+        let html5QrcodeScanner; // Declarar la variable aquí para que sea accesible globalmente
 
         function onScanSuccess(decodedText, decodedResult) {
             if (isProcessing) return;
             isProcessing = true;
-            html5QrcodeScanner.pause();
             scanStatus.textContent = "Procesando premio...";
 
             // Usamos btoa para codificar el texto del premio en Base64.
@@ -162,10 +162,13 @@
                 }
                 resultContainer.style.display = 'flex';
                 resetButton.style.display = 'block';
+                // Detenemos el escáner por completo después de un resultado
+                html5QrcodeScanner.clear().catch(error => {
+                    console.error("Fallo al limpiar el escáner QR.", error);
+                });
             }).catch(error => {
                 console.error("Error en la transacción de Firebase:", error);
                 scanStatus.textContent = "Error al verificar el premio. Intenta de nuevo.";
-                html5QrcodeScanner.resume();
                 isProcessing = false;
             });
         }
@@ -174,20 +177,23 @@
             // No hacemos nada en caso de fallo, el escáner sigue intentando.
         }
 
-        const html5QrcodeScanner = new Html5QrcodeScanner(
-            "qr-reader", 
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            /* verbose= */ false);
-        
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        function startScanner() {
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "qr-reader", 
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                /* verbose= */ false);
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
 
         resetButton.addEventListener('click', () => {
             resultContainer.style.display = 'none';
             resetButton.style.display = 'none';
             scanStatus.textContent = "Apunte la cámara al código QR del premio...";
             isProcessing = false;
-            html5QrcodeScanner.resume();
+            startScanner(); // Reinicia el escáner para una nueva lectura
         });
+
+        startScanner(); // Inicia el escáner al cargar la página
 
     </script>
 </body>

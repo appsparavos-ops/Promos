@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>🍔 Raspadita de Noviembre 🍔 - AZ Burger</title>
+<style>
+  /* Asegurar que html y body ocupen toda la pantalla y no permitan scroll en móviles */
+  html, body { height: 100%; overscroll-behavior-y: none; }
+  body { -webkit-touch-callout: none; -webkit-user-select: none; -ms-user-select: none; user-select: none; }
+  body {
+    background: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    overflow: hidden; /* Evita el scroll en la página */
+    margin: 0;
+    padding: 0;
+    touch-action: manipulation;
+  }
+  h1 { color: #e74c3c; }
+  .muted { font-size: 13px; color: #aaa; }
+  .scratch-wrap { 
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 10px;
+    width: 310px; 
+    height: 310px; 
+    margin: auto; 
+    pointer-events: auto; /* Permitir eventos sobre el contenedor (controlado por JS) */
+    box-sizing: border-box;
+    background: transparent;
+  }
+  .scratch-box {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    border: 2px solid rgb(89, 89, 87);
+    box-sizing: border-box;
+    background: #111;
+  }
+  #prizeBox { 
+    /* Este ID ya no se usa para un solo premio, se usa una clase */
+  }
+  .prize-content {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center; 
+    color: gold; font-weight: bold;
+    pointer-events: none; /* No interceptar eventos del canvas */
+  }
+  canvas { position: absolute; top:0; left:0; touch-action: none; }
+  canvas { pointer-events: auto; }
+
+  .modal {
+    display: flex; 
+    position: fixed; 
+    z-index: 9999; 
+    left: 0;
+    top: 0;
+    width: 100vw; 
+    height: 50vh; 
+    overflow: hidden; 
+    background-color: rgba(0,0,0,0.85); 
+    justify-content: center;
+    align-items: center;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-content {
+    background-color: #333;
+    padding: 14px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 12px;
+    text-align: center;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #userForm input {
+    width: calc(100% - 22px);
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #555;
+    background-color: #222;
+    color: #fff;
+  }
+
+  #userForm button {
+    background-color: #e74c3c;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  #secondAttemptBtn {
+      background-color: #e74c3c;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 20px;
+      margin-left: auto;
+      margin-right: auto;
+      display: none;
+  }
+
+  #goodbyeMessage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    pointer-events: none;
+  }
+
+  #goodbyeMessage p {
+    color: white;
+    font-size: 1vw;
+    transform: scale(0.1);
+    transition: all 1.5s ease-out;
+  }
+
+  @media screen and (max-width: 600px) {
+    /* Modal grande y centrado, sin scroll */
+    .modal-content {
+      width: 98vw;
+      height: 98vh; /* Ocupa casi toda la pantalla */
+      max-width: 98vw;
+      max-height: 98vh;
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    /* Centrar main content y hacerlo full-screen */
+    #mainContent {
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+      padding: 8px;
+    }
+
+    /* Hacer la raspadita tan grande como quepa en pantalla (cuadrada) */
+    .scratch-wrap {
+      width: 90vw; /* Ancho relativo a la pantalla */
+      height: 90vw; /* Mantener proporción cuadrada */
+      max-width: 90vh; /* asegurar que entre en altura */
+      max-height: 90vh;
+      border-radius: 8px;
+      overflow: hidden;
+      grid-gap: 8px;
+    }
+
+    .scratch-box {
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+    }
+
+    #scratchCanvas {
+      /* Este ID ya no se usa, se usa una clase */
+    }
+
+    .scratch-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Mensaje de despedida grande y centrado */
+    #goodbyeMessage {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+      top: 0;
+      left: 0;
+      padding: 0;
+    }
+
+    #goodbyeMessage p {
+      font-size: 12vw; /* Muy grande */
+      text-align: center;
+      margin: 0;
+      transform: scale(1);
+    }
+
+    /* Reducir tamaño del título en vista móvil para dejar más espacio a la raspadita */
+    h1 {
+      font-size: 6vw;
+      margin: 6px 0 8px 0;
+      line-height: 1.05;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div id="welcomeModal" class="modal">
+    <div class="modal-content">
+      <h2>Bienvenido a la Raspadita de AZ Burger</h2>
+      <p>Por favor, regístrate para jugar.</p>
+      <form id="userForm">
+        <input type="text" id="userName" placeholder="Nombre y Apellido" required>
+  <input type="tel" id="userPhone" placeholder="Número de Teléfono (9 dígitos)" required inputmode="numeric" pattern="\d{9}" minlength="9" maxlength="9" title="Ingrese 9 dígitos" />
+        <button type="submit">Jugar</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="mainContent" style="display: none;">
+    <h1>🍔 Raspadita de Noviembre 🍔</h1>
+    <p>Sigue a <b>@azburgerhouse</b> en Instagram para jugar</p>
+    <div id="scratchContainer" class="scratch-wrap">
+      <div class="scratch-box">
+        <div class="prize-content" data-prize-id="0">Cargando...</div>
+        <canvas class="scratch-canvas" id="canvas-0" width="150" height="150"></canvas>
+      </div>
+      <div class="scratch-box">
+        <div class="prize-content" data-prize-id="1">Cargando...</div>
+        <canvas class="scratch-canvas" id="canvas-1" width="150" height="150"></canvas>
+      </div>
+      <div class="scratch-box">
+        <div class="prize-content" data-prize-id="2">Cargando...</div>
+        <canvas class="scratch-canvas" id="canvas-2" width="150" height="150"></canvas>
+      </div>
+      <div class="scratch-box">
+        <div class="prize-content" data-prize-id="3">Cargando...</div>
+        <canvas class="scratch-canvas" id="canvas-3" width="150" height="150"></canvas>
+      </div>
+    </div>
+
+    <p>👆 Elige y raspa un cuadrado 👆</p>
+    <button id="secondAttemptBtn">Jugar 2do Intento</button>
+    <p id="result"></p>
+    <footer>
+      <p class="muted">Si no sigues la página no tendrás derecho a reclamar el premio.</p>
+      <p class="muted" id="expirationDate">Premios válidos hasta el domingo.</p>
+      <p class="muted">No acumulables con otras promociones</p>
+    </footer>
+  </div>
+
+  <div id="goodbyeMessage" style="display: none;">
+    <p>Gracias por participar</p>
+  </div>
+
+<script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+  // Inicializar Firebase
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+
+  let currentUser = null;
+  let isSecondAttempt = false;
+  const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  let choiceMade = false;
+  let prizeData = {}; // Almacenar los datos de premios aquí
+
+  // --- Lógica Semanal ---
+  let currentWeekId = '';
+  let expirationDateString = '';
+
+  function getWeekInfo() {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=Domingo, 1=Lunes, ..., 6=Sábado
+    
+    // Calcular inicio de la semana (domingo)
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - dayOfWeek);
+    weekStart.setHours(0, 0, 0, 0);
+
+    // Calcular fin de la semana (próximo domingo para el vencimiento)
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    currentWeekId = `semana_${weekStart.getFullYear()}${(weekStart.getMonth() + 1).toString().padStart(2, '0')}${weekStart.getDate().toString().padStart(2, '0')}`;
+    expirationDateString = `${weekEnd.getDate()}/${weekEnd.getMonth() + 1}`;
+  }
+  // --- Fin Lógica Semanal ---
+
+  const modal = document.getElementById('welcomeModal');
+  const userForm = document.getElementById('userForm');
+  const userNameInput = document.getElementById('userName');
+  const userPhoneInput = document.getElementById('userPhone');
+  const scratchContainer = document.getElementById('scratchContainer');
+  const secondAttemptBtn = document.getElementById('secondAttemptBtn');
+
+  window.addEventListener('DOMContentLoaded', () => {
+    getWeekInfo(); // Calcular la semana actual al cargar la página
+    document.getElementById('expirationDate').textContent = `Premios válidos hasta el ${expirationDateString}.`;
+    modal.style.display = 'flex';
+  });
+
+  userForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    let phone = (userPhoneInput.value || '').toString().replace(/\D/g, '');
+    const name = (userNameInput.value || '').toString().trim();
+
+    if (!phone || !name || phone.length !== 9) {
+      alert('Por favor, completa todos los campos con un teléfono válido de 9 dígitos.');
+      return;
+    }
+
+    const clienteRef = database.ref('clientes/' + phone);
+    clienteRef.set({ nombre: name, telefono: phone });
+
+    const userRef = database.ref(`noviembre/${currentWeekId}/users/${phone}`);
+    userRef.once('value').then((snapshot) => {
+      if (snapshot.exists()) {
+        currentUser = snapshot.val();
+        const wonFirst = currentUser.attempt1_result && currentUser.attempt1_result.includes('🎁');
+        if (currentUser.attempts >= 2 || wonFirst) {
+          alert('Este número de teléfono ya ha participado y no puede jugar de nuevo esta semana.');
+          return;
+        }
+      } else {
+        currentUser = { name, phone, attempts: 0, attempt1_result: null, attempt2_result: null };
+      }
+
+      // Cargar datos de premios ANTES de empezar a jugar
+      const prizesRef = database.ref(`noviembre/premios`);
+      prizesRef.once('value').then(prizesSnapshot => {
+        prizeData = prizesSnapshot.val() || {};
+        console.log("Datos de premios cargados:", prizeData);
+
+        // Ocultar modal y mostrar juego
+        modal.style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        setTimeout(initializeCanvases, 0);
+        window.scrollTo(0, 0);
+
+        if (currentUser.attempts === 1) {
+          secondAttemptBtn.style.display = 'block';
+          scratchContainer.style.pointerEvents = 'none';
+        } else {
+          scratchContainer.style.pointerEvents = 'auto';
+        }
+      });
+
+      if (!snapshot.exists()) {
+        userRef.set(currentUser);
+      }
+    });
+  });
+  
+  secondAttemptBtn.addEventListener('click', () => {
+    revealed = false;
+    isSecondAttempt = true;
+    choiceMade = false;
+    
+    prizeContents.forEach((prizeDiv, index) => {
+        const box = prizeDiv.parentElement;
+        box.style.background = '#111';
+        const canvas = canvases[index];
+        canvas.style.display = 'block';
+        canvas.style.opacity = '1';
+        canvas.style.pointerEvents = 'auto';
+    });
+
+    initializeCanvases();
+    scratchContainer.style.pointerEvents = 'auto';
+    secondAttemptBtn.style.display = 'none';
+    result.textContent = '';
+  });
+
+  function weightedPickConLimites(prizes) {
+    const prizeConfig = [
+        { key: 'papas_extra', weight: 20 },
+        { key: 'carne_extra', weight: 15 },
+        { key: 'latita_cerveza', weight: 5 }
+    ];
+
+    const availablePrizes = prizeConfig.filter(p => prizes[p.key] && prizes[p.key].concedido < prizes[p.key].limite);
+    if (availablePrizes.length === 0) return 'participa';
+
+    const totalWeight = availablePrizes.reduce((sum, p) => sum + p.weight, 0);
+    const participationWeight = 60;
+    const random = Math.random() * (totalWeight + participationWeight);
+
+    if (random < participationWeight) return 'participa';
+
+    let cumulativeWeight = participationWeight;
+    for (const prize of availablePrizes) {
+        cumulativeWeight += prize.weight;
+        if (random < cumulativeWeight) {
+            return prize.key;
+        }
+    }
+    
+    return 'participa';
+  }
+
+  const canvases = document.querySelectorAll('.scratch-canvas');
+  const prizeContents = document.querySelectorAll('.prize-content');
+  const result = document.getElementById('result');
+  const img = new Image();
+  let canvasInitialized = false;
+
+  function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+  }
+
+  function initializeCanvases() {
+    prizeContents.forEach((prizeDiv, index) => {
+      prizeDiv.textContent = '';
+      resetCanvas(canvases[index]);
+    });
+    if (!canvasInitialized) {
+        window.addEventListener('resize', () => canvases.forEach(c => resetCanvas(c)));
+        canvasInitialized = true;
+    }
+  }
+
+  img.onload = () => canvases.forEach(c => resetCanvas(c));
+  img.src = 'logo.png';
+
+  function resetCanvas(canvas){
+    const ctx = canvas.getContext('2d');
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    ctx.globalCompositeOperation='source-over';
+    ctx.fillStyle = '#333';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (img && img.complete && img.naturalWidth > 0) {
+      try { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); } catch (err) { console.warn(`drawImage falló: ${err}`); }
+    } else { console.warn(`Imagen no disponible`); }
+  }
+
+  let drawing=false, revealed = false, activeCanvas = null;
+
+  function getPos(e, canvasElement){
+    const rect = canvasElement.getBoundingClientRect();
+    let event = e.touches ? e.touches[0] : e;
+    const scaleX = isMobile ? canvasElement.width / rect.width : 1;
+    const scaleY = isMobile ? canvasElement.height / rect.height : 1;
+    return { x: (event.clientX - rect.left) * scaleX, y: (event.clientY - rect.top) * scaleY };
+  }
+
+  function erase(canvas, x, y){
+    const ctx = canvas.getContext('2d');
+    ctx.globalCompositeOperation='destination-out';
+    ctx.beginPath();
+    ctx.arc(x,y,20,0,Math.PI*2);
+    ctx.fill();
+    checkReveal(canvas);
+  }
+
+  function showGoodbyeMessage(passedPrize = '') {
+    document.getElementById('mainContent').style.display = 'none';
+    const goodbyeDiv = document.getElementById('goodbyeMessage');
+    const prize = passedPrize.trim();
+    const hasPrize = prize.includes('🎁');
+    goodbyeDiv.innerHTML = '';
+    const p = document.createElement('p');
+    p.textContent = hasPrize ? prize : 'Gracias por participar';
+    if(hasPrize) { p.style.color = 'gold'; p.style.fontSize = '12vw'; p.style.textAlign = 'center';} 
+    else { p.style.transform = 'scale(0.1)'; p.style.fontSize = '8vw'; }
+    goodbyeDiv.appendChild(p);
+    goodbyeDiv.style.display = 'flex';
+    goodbyeDiv.style.pointerEvents = 'auto';
+    setTimeout(() => { 
+        goodbyeDiv.style.opacity = '1'; 
+        if(!hasPrize) p.style.transform = 'scale(1)';
+    }, 100);
+  }
+
+  function checkReveal(canvas){
+    if(revealed) return;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+    let transparent=0;
+    for(let i=3;i<imgData.length;i+=4) if(imgData[i]<128) transparent++;
+    if(transparent > canvas.width*canvas.height*0.35) {
+        revealed = true;
+        const prizeId = canvas.id.split('-')[1];
+        const prizeDiv = document.querySelector(`.prize-content[data-prize-id="${prizeId}"]`);
+        finalizePrize(prizeDiv, prizeId);
+    }
+  }
+
+  async function finalizePrize(prizeDiv, prizeId) {
+    const pick = weightedPickConLimites(prizeData);
+    let finalPrize, didWin = false, prizeCode = null;
+
+    if (pick === 'participa') {
+        finalPrize = '❌ Seguí participando';
+        prizeDiv.textContent = finalPrize;
+        updateUserRecord(finalPrize, prizeId, didWin, prizeCode);
+    } else {
+        const prizeRef = database.ref(`noviembre/premios/${pick}`);
+        const { committed, snapshot } = await prizeRef.transaction(data => {
+            if (data === null) return { limite: 0, concedido: 0 }; // Si no existe, inicializa
+            if (data.concedido < data.limite) {
+                data.concedido++;
+                return data;
+            }
+            return; // Abortar si se alcanzó el límite
+        });
+
+        if (committed && snapshot.exists()) {
+            const prizeInfo = snapshot.val();
+            const prizeNameMap = { 'papas_extra': 'Papas Extra', 'carne_extra': '1 Carne Extra', 'latita_cerveza': 'Latita de Cerveza' };
+            const prizePrefixMap = { 'papas_extra': 'AZPE', 'carne_extra': 'AZCE', 'latita_cerveza': 'AZLC' };
+            
+            const prizeNumber = prizeInfo.concedido;
+            prizeCode = `${prizePrefixMap[pick]}-${prizeNumber.toString().padStart(3, '0')}`;
+            finalPrize = `🎁 ${prizeNameMap[pick]}\nCódigo: ${prizeCode}`;
+            didWin = true;
+        } else {
+            finalPrize = '❌ Seguí participando';
+        }
+        prizeDiv.style.whiteSpace = 'pre-wrap';
+        prizeDiv.textContent = finalPrize;
+        if (didWin) result.textContent = `Válido hasta ${expirationDateString}. Mostrar en local para canjear.`;
+        updateUserRecord(finalPrize, prizeId, didWin, prizeCode);
+    }
+  }
+
+  function revealUnselectedBoxes(selectedPrizeId, didWin) {
+    const unselected = Array.from(prizeContents).filter(p => p.dataset.prizeId !== selectedPrizeId);
+    if (didWin) {
+        unselected.forEach(prizeDiv => {
+            prizeDiv.textContent = '❌ Seguí participando';
+            const box = prizeDiv.parentElement;
+            box.querySelector('.scratch-canvas').style.display = 'none';
+        });
+    } else {
+        shuffleArray(unselected);
+        unselected.forEach((prizeDiv, index) => {
+            const box = prizeDiv.parentElement;
+            box.querySelector('.scratch-canvas').style.display = 'none';
+            box.style.background = '#e74c3c';
+            prizeDiv.textContent = (index === 0) ? '🎁 1 Hamburguesa Gratis' : '❌ Seguí participando';
+        });
+    }
+  }
+
+  function updateUserRecord(prize, prizeId, didWin, prizeCode) {
+    if(!currentUser) return;
+    const attemptField = isSecondAttempt ? 'attempt2_result' : 'attempt1_result';
+    const updates = {};
+    const attemptsAfter = currentUser.attempts + 1;
+    updates[`noviembre/${currentWeekId}/users/${currentUser.phone}/attempts`] = attemptsAfter;
+    updates[`noviembre/${currentWeekId}/users/${currentUser.phone}/${attemptField}`] = prize;
+
+    if (didWin) {
+      updates[`noviembre/${currentWeekId}/users/${currentUser.phone}/estadoPremio`] = 'otorgado';
+      database.ref('winners').push({ 
+          phone: currentUser.phone, 
+          prize: prize.split('\n')[0], // Guardar solo el nombre del premio
+          code: prizeCode, 
+          ts: Date.now() 
+      });
+    }
+    database.ref().update(updates);
+
+    revealUnselectedBoxes(prizeId, didWin);
+    currentUser.attempts = attemptsAfter;
+
+    if (didWin || attemptsAfter >= 2) {
+        secondAttemptBtn.style.display = 'none';
+        scratchContainer.style.pointerEvents = 'none';
+        setTimeout(() => showGoodbyeMessage(prize), 6000);
+    } else {
+        secondAttemptBtn.style.display = 'block';
+        scratchContainer.style.pointerEvents = 'none';
+    }
+    isSecondAttempt = false;
+  }
+
+  function startDrawing(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (choiceMade) return;
+    choiceMade = true;
+    activeCanvas = e.target;
+    canvases.forEach(canvas => {
+        if (canvas.id !== activeCanvas.id) {
+            canvas.style.pointerEvents = 'none';
+            canvas.style.opacity = '0.5';
+        }
+    });
+    drawing = true;
+    let p = getPos(e, activeCanvas);
+    erase(activeCanvas, p.x, p.y);
+  }
+
+  function stopDrawing() {
+    if (drawing) {
+      drawing = false;
+      if (activeCanvas) checkReveal(activeCanvas);
+      activeCanvas = null;
+    }
+  }
+
+  function draw(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (drawing && activeCanvas) {
+      let p = getPos(e, activeCanvas);
+      erase(activeCanvas, p.x, p.y);
+    }
+  }
+
+  canvases.forEach(canvas => {
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('touchstart', startDrawing, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+  });
+
+  window.addEventListener('mouseup', stopDrawing);
+  window.addEventListener('touchend', stopDrawing, { passive: false });
+
+</script>
+</body>
+</html>

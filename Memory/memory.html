@@ -309,30 +309,43 @@
             opacity: 0;
         }
 
-        /* BOTÓN DE MÚSICA */
-        .mute-btn {
+        /* CONTROLES DE AUDIO */
+        .audio-controls {
             position: fixed;
             bottom: 20px;
             right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
             background: var(--panel-bg);
             border: 1px solid var(--card-border);
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            border-radius: 30px;
+            padding: 8px 15px 8px 20px;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .mute-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            cursor: pointer;
-            z-index: 100;
-            backdrop-filter: blur(12px);
-            color: white;
-            transition: all 0.2s ease;
+            transition: transform 0.2s;
         }
 
         .mute-btn:hover {
-            background: var(--card-border);
             transform: scale(1.1);
+        }
+
+        input[type="range"] {
+            width: 80px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
         }
     </style>
 </head>
@@ -393,7 +406,10 @@
 
     <!-- AUDIO Y BOTÓN MUTE -->
     <audio id="bg-music" src="audio.mp3" loop></audio>
-    <button id="mute-btn" class="mute-btn" onclick="toggleMute()" style="display: none;">🔊</button>
+    <div id="audio-controls" class="audio-controls" style="display: none;">
+        <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" oninput="changeVolume()">
+        <button id="mute-btn" class="mute-btn" onclick="toggleMute()">🔊</button>
+    </div>
 
     <script>
         // CONFIGURACIÓN: Las imágenes de las guerreras estarán en la carpeta 'img' y se llamarán 1.jpg, 2.jpg... hasta 24.jpg
@@ -408,6 +424,7 @@
         let currentMode = 'prob';
         let totalPairsTarget = 0;
         let hasReshuffled = false;
+        let globalVolume = 1;
 
         function toggleMute() {
             const bgMusic = document.getElementById('bg-music');
@@ -415,6 +432,24 @@
             isMuted = !isMuted;
             bgMusic.muted = isMuted;
             muteBtn.textContent = isMuted ? '🔇' : '🔊';
+        }
+
+        function changeVolume() {
+            const slider = document.getElementById('volume-slider');
+            globalVolume = slider.value;
+            const bgMusic = document.getElementById('bg-music');
+            bgMusic.volume = globalVolume;
+            
+            const muteBtn = document.getElementById('mute-btn');
+            if (globalVolume == 0) {
+                isMuted = true;
+                bgMusic.muted = true;
+                muteBtn.textContent = '🔇';
+            } else if (isMuted) {
+                isMuted = false;
+                bgMusic.muted = false;
+                muteBtn.textContent = '🔊';
+            }
         }
 
         function animateScore(points, playerIndex) {
@@ -556,11 +591,11 @@
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
 
-            // Iniciar música y mostrar botón
+            // Iniciar música y mostrar controles
             const bgMusic = document.getElementById('bg-music');
-            const muteBtn = document.getElementById('mute-btn');
+            const audioControls = document.getElementById('audio-controls');
             bgMusic.play().catch(e => console.log('El navegador bloqueó el autoplay', e));
-            muteBtn.style.display = 'flex';
+            audioControls.style.display = 'flex';
             
             renderScoreboard();
             renderBoard();
@@ -659,7 +694,13 @@
                     points *= 2;
                 }
 
-                // COINCIDENCIA: Sumar puntos y descartar cartas
+                // COINCIDENCIA: Sumar puntos y reproducir sonido (si no está silenciado)
+                if (!isMuted && globalVolume > 0) {
+                    const sfx = new Audio('acierto.mp3');
+                    sfx.volume = globalVolume;
+                    sfx.play().catch(e => console.log('SFX bloqueado por el navegador', e));
+                }
+
                 players[currentPlayerIndex].score += points;
                 matchedPairsCount += 1;
                 animateScore(points, currentPlayerIndex);

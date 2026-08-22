@@ -357,7 +357,7 @@
             <h1>Juego de Memoria</h1>
             <div class="form-group">
                 <label for="player-count">Cantidad de Jugadores</label>
-                <select id="player-count" onchange="renderPlayerInputs()">
+                <select id="player-count" onchange="renderPlayerInputs(); savePreferences()">
                     <option value="1">1 Jugador</option>
                     <option value="2" selected>2 Jugadores</option>
                     <option value="3">3 Jugadores</option>
@@ -366,20 +366,20 @@
             </div>
 
             <div class="form-group">
-                <label for="card-count">Cantidad de Cartas</label>
-                <select id="card-count">
-                    <option value="12">12 Cartas</option>
-                    <option value="24">24 Cartas</option>
-                    <option value="36">36 Cartas</option>
-                    <option value="48" selected>48 Cartas</option>
+                <label for="card-count">Nivel de Dificultad</label>
+                <select id="card-count" onchange="savePreferences()">
+                    <option value="12" selected>Principiante</option>
+                    <option value="24">Intermedio</option>
+                    <option value="36">Avanzado</option>
+                    <option value="48">Profesional</option>
                 </select>
             </div>
 
             <div class="form-group">
                 <label for="game-mode">Modo de Juego</label>
-                <select id="game-mode">
-                    <option value="prob" selected>Dinámico (Probabilidades)</option>
-                    <option value="classic">Clásico (1 punto por acierto)</option>
+                <select id="game-mode" onchange="savePreferences()">
+                    <option value="prob" selected>Dinámico</option>
+                    <option value="classic">Clásico</option>
                 </select>
             </div>
 
@@ -490,6 +490,22 @@
             animation.onfinish = () => floater.remove();
         }
 
+        function savePreferences() {
+            localStorage.setItem('prefLevel', document.getElementById('card-count').value);
+            localStorage.setItem('prefPlayers', document.getElementById('player-count').value);
+            localStorage.setItem('prefMode', document.getElementById('game-mode').value);
+        }
+
+        function loadPreferences() {
+            const level = localStorage.getItem('prefLevel');
+            const players = localStorage.getItem('prefPlayers');
+            const mode = localStorage.getItem('prefMode');
+            
+            if (level) document.getElementById('card-count').value = level;
+            if (players) document.getElementById('player-count').value = players;
+            if (mode) document.getElementById('game-mode').value = mode;
+        }
+
         // Renderizar inputs de nombres de jugadores
         function renderPlayerInputs() {
             const count = parseInt(document.getElementById('player-count').value);
@@ -500,8 +516,16 @@
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.id = `player-${i}`;
-                input.placeholder = `Nombre Jugador ${i}`;
-                input.value = `Jugador ${i}`;
+                input.placeholder = `Jugador ${i}`;
+                input.value = ''; // Limpio por defecto
+                
+                // Cargar nombre guardado
+                const savedName = localStorage.getItem(`savedPlayer${i}`);
+                if (savedName) input.value = savedName;
+                
+                // Guardar nombre al escribir
+                input.oninput = () => localStorage.setItem(`savedPlayer${i}`, input.value);
+                
                 container.appendChild(input);
             }
         }
@@ -797,6 +821,7 @@
         }
 
         // Inicialización
+        loadPreferences();
         renderPlayerInputs();
     </script>
 </body>

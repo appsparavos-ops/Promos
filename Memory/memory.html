@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Juego de Memoria 48 Cartas - APEX</title>
+    <link rel="icon" type="image/jpeg" href="img/8.jpg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -699,6 +700,7 @@
             const modal = document.getElementById('winner-modal');
             const title = document.getElementById('winner-title');
             const detail = document.getElementById('winner-detail');
+            const btn = modal.querySelector('.btn');
 
             // Determinar ganador(es)
             let maxScore = -1;
@@ -715,10 +717,17 @@
 
             if (winners.length === 1) {
                 title.textContent = `¡Victoria para ${winners[0]}!`;
-                detail.textContent = `Puntuación total: ${maxScore} pares encontrados.`;
+                detail.textContent = `Puntuación total: ${maxScore} puntos.`;
+                btn.textContent = "Jugar de Nuevo";
+                btn.onclick = resetToSetup;
             } else {
-                title.textContent = `¡Empate!`;
-                detail.textContent = `Ganadores: ${winners.join(', ')} con ${maxScore} puntos cada uno.`;
+                title.textContent = `¡Desempate!`;
+                detail.textContent = `Empate entre ${winners.join(' y ')} con ${maxScore} puntos. ¡La partida continúa!`;
+                btn.textContent = "Iniciar Desempate";
+                btn.onclick = () => {
+                    modal.style.display = 'none';
+                    startTieBreaker();
+                };
             }
 
             modal.style.display = 'flex';
@@ -728,6 +737,22 @@
             document.getElementById('winner-modal').style.display = 'none';
             document.getElementById('game-screen').style.display = 'none';
             document.getElementById('setup-screen').style.display = 'block';
+        }
+
+        function startTieBreaker() {
+            const cardCount = parseInt(document.getElementById('card-count').value);
+            
+            // NO limpiamos el array 'players' ni reiniciamos sus scores.
+            currentPlayerIndex = 0;
+            matchedPairsCount = 0;
+            seenCards.clear();
+            totalPairsTarget = cardCount / 2;
+            hasReshuffled = false;
+            cardsData = generateDeck(cardCount);
+            
+            // Re-renderizamos tablero y puntajes actualizados (que mantienen el score)
+            renderScoreboard();
+            renderBoard();
         }
 
         // Inicialización

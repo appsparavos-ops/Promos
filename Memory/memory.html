@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Memoria 48 Cartas - APEX</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --card-back: #1e293b;
+            --card-border: #334155;
+            --accent-color: #6366f1;
+            --accent-hover: #4f46e5;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --active-player: #10b981;
+        }
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        body {
+            background-color: #4a3728;
+            background-image: url('img/fondo.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* CONFIGURACIÓN INICIAL */
+        .card-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+            background-color: #0f172a;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .player-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background-color: var(--accent-color);
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        /* TABLERO Y PUNTUACIÓN */
+        #game-screen {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .scoreboard {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .player-card {
+            background: var(--panel-bg);
+            border: 2px solid var(--card-border);
+            padding: 12px 20px;
+            border-radius: 12px;
+            min-width: 140px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .player-card.active {
+            border-color: var(--active-player);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+            transform: scale(1.05);
+        }
+
+        .player-card .name {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .player-card .score {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .grid {
+            display: grid;
+            gap: 10px;
+            width: fit-content;
+            max-width: 100%;
+            overflow-x: auto;
+            perspective: 1000px;
+        }
+
+        .grid.cards-12 {
+            grid-template-columns: repeat(4, 120px);
+        }
+
+        .grid.cards-24,
+        .grid.cards-36 {
+            grid-template-columns: repeat(6, 120px);
+        }
+
+        .grid.cards-48 {
+            grid-template-columns: repeat(8, 120px);
+        }
+
+        /* CARTAS 3D */
+        .card {
+            width: 120px;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+            pointer-events: none;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-back-face {
+            background-color: #1e293b;
+            background-image: url('img/reves.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .card-back-face::after {
+            content: none;
+        }
+
+        .card-front-face {
+            background-color: #ffffff;
+            transform: rotateY(180deg);
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .card-front-face img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px; /* Ajustado para que respete el borde de la carta */
+        }
+
+        /* MODAL DE VICTORIA */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: var(--panel-bg);
+            border: 1px solid var(--card-border);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: var(--active-player);
+        }
+
+        .modal p {
+            margin-bottom: 20px;
+            color: var(--text-muted);
+        }
+
+        /* ANIMACIÓN DE PUNTAJE */
+        .floating-score {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: 900;
+            color: #10b981;
+            text-shadow: 0 0 15px rgba(0,0,0,0.8), 0 0 30px #10b981;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        /* BOTÓN DE MÚSICA */
+        .mute-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--panel-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .mute-btn:hover {
+            background: var(--card-border);
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- PANTALLA CONFIGURACIÓN -->
+        <div id="setup-screen" class="card-panel">
+            <h1>Juego de Memoria</h1>
+            <div class="form-group">
+                <label for="player-count">Cantidad de Jugadores</label>
+                <select id="player-count" onchange="renderPlayerInputs()">
+                    <option value="1">1 Jugador</option>
+                    <option value="2" selected>2 Jugadores</option>
+                    <option value="3">3 Jugadores</option>
+                    <option value="4">4 Jugadores</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="card-count">Cantidad de Cartas</label>
+                <select id="card-count">
+                    <option value="12">12 Cartas</option>
+                    <option value="24">24 Cartas</option>
+                    <option value="36">36 Cartas</option>
+                    <option value="48" selected>48 Cartas</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="game-mode">Modo de Juego</label>
+                <select id="game-mode">
+                    <option value="prob" selected>Dinámico (Probabilidades)</option>
+                    <option value="classic">Clásico (1 punto por acierto)</option>
+                </select>
+            </div>
+
+            <div id="player-inputs" class="player-inputs"></div>
+
+            <button class="btn" style="margin-top: 20px;" onclick="startGame()">Iniciar Juego</button>
+        </div>
+
+        <!-- PANTALLA DE JUEGO -->
+        <div id="game-screen">
+            <div id="scoreboard" class="scoreboard"></div>
+            <div id="grid" class="grid"></div>
+        </div>
+    </div>
+
+    <!-- MODAL FIN DE JUEGO -->
+    <div id="winner-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="winner-title">¡Fin del Juego!</h2>
+            <p id="winner-detail"></p>
+            <button class="btn" onclick="resetToSetup()">Jugar de Nuevo</button>
+        </div>
+    </div>
+
+    <!-- AUDIO Y BOTÓN MUTE -->
+    <audio id="bg-music" src="audio.mp3" loop></audio>
+    <button id="mute-btn" class="mute-btn" onclick="toggleMute()" style="display: none;">🔊</button>
+
+    <script>
+        // CONFIGURACIÓN: Las imágenes de las guerreras estarán en la carpeta 'img' y se llamarán 1.jpg, 2.jpg... hasta 24.jpg
+        let players = [];
+        let currentPlayerIndex = 0;
+        let cardsData = [];
+        let flippedCards = [];
+        let lockBoard = false;
+        let matchedPairsCount = 0;
+        let seenCards = new Set();
+        let isMuted = false;
+        let currentMode = 'prob';
+        let totalPairsTarget = 0;
+        let hasReshuffled = false;
+
+        function toggleMute() {
+            const bgMusic = document.getElementById('bg-music');
+            const muteBtn = document.getElementById('mute-btn');
+            isMuted = !isMuted;
+            bgMusic.muted = isMuted;
+            muteBtn.textContent = isMuted ? '🔇' : '🔊';
+        }
+
+        function animateScore(points, playerIndex) {
+            const floater = document.createElement('div');
+            floater.className = 'floating-score';
+            floater.style.textAlign = 'center';
+            
+            const playerName = players[playerIndex].name;
+            floater.innerHTML = `<span style="font-size: 1.5rem; display: block; margin-bottom: 5px;">¡Felicitaciones ${playerName}!</span>Ganaste ${points} puntos`;
+            
+            // Si es puntaje doble, cambiar el color a dorado
+            if (points >= 10) {
+                floater.style.color = '#fbbf24';
+                floater.style.textShadow = '0 0 15px rgba(0,0,0,0.8), 0 0 30px #fbbf24';
+            }
+
+            document.body.appendChild(floater);
+
+            const targetCard = document.getElementById(`score-card-${playerIndex}`);
+            const targetRect = targetCard.getBoundingClientRect();
+            
+            // Destino en la pantalla respecto al centro
+            const endX = (targetRect.left + targetRect.width / 2) - (window.innerWidth / 2);
+            const endY = (targetRect.top + targetRect.height / 2) - (window.innerHeight / 2);
+
+            const animation = floater.animate([
+                { opacity: 0, transform: 'translate(-50%, -50%) scale(0.5)', offset: 0 },
+                { opacity: 1, transform: 'translate(-50%, -50%) scale(1.2)', offset: 0.1 },
+                { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: 0.15 },
+                { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: 0.66 }, // Se queda en el centro hasta los 2s
+                { opacity: 0, transform: `translate(calc(-50% + ${endX}px), calc(-50% + ${endY}px)) scale(0.2)`, offset: 1 } // Viaja lentamente en el último segundo
+            ], {
+                duration: 3000,
+                easing: 'ease-in-out',
+                fill: 'forwards'
+            });
+
+            animation.onfinish = () => floater.remove();
+        }
+
+        // Renderizar inputs de nombres de jugadores
+        function renderPlayerInputs() {
+            const count = parseInt(document.getElementById('player-count').value);
+            const container = document.getElementById('player-inputs');
+            container.innerHTML = '';
+
+            for (let i = 1; i <= count; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = `player-${i}`;
+                input.placeholder = `Nombre Jugador ${i}`;
+                input.value = `Jugador ${i}`;
+                container.appendChild(input);
+            }
+        }
+
+        // Crear el mazo completo de parejas de imágenes
+        function generateDeck(cardCount) {
+            const deck = [];
+            let id = 0;
+            const pairCount = cardCount / 2;
+
+            for (let i = 1; i <= pairCount; i++) {
+                const cardSymbol = {
+                    pairId: `kpop-${i}`,
+                    image: `<img src="img/${i}.jpg" alt="Guerrera K-pop ${i}">`
+                };
+                // Se insertan 2 copias idénticas por pareja
+                deck.push({ ...cardSymbol, instanceId: id++ });
+                deck.push({ ...cardSymbol, instanceId: id++ });
+            }
+
+            // Algoritmo de mezcla Fisher-Yates
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+
+            return deck;
+        }
+
+        function reshuffleBoard() {
+            // Animación de aviso
+            const floater = document.createElement('div');
+            floater.className = 'floating-score';
+            floater.style.textAlign = 'center';
+            floater.style.color = '#c084fc';
+            floater.style.textShadow = '0 0 15px rgba(0,0,0,0.8), 0 0 30px #c084fc';
+            floater.innerHTML = `<span style="font-size: 2rem; display: block;">¡Magia Espiritual!</span>Modo 24 Cartas`;
+            document.body.appendChild(floater);
+            
+            floater.animate([
+                { opacity: 0, transform: 'translate(-50%, -50%) scale(0.5)' },
+                { opacity: 1, transform: 'translate(-50%, -50%) scale(1.2)', offset: 0.2 },
+                { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: 0.8 },
+                { opacity: 0, transform: 'translate(-50%, -50%) scale(0.5)', offset: 1 }
+            ], { duration: 2000, easing: 'ease-in-out' }).onfinish = () => floater.remove();
+
+            // Retrasar el renderizado real para que la animación se vea y las cartas se borren
+            setTimeout(() => {
+                // Filtrar las cartas que no están emparejadas (miramos el DOM para ver cuáles tienen .matched)
+                const matchedElements = document.querySelectorAll('.card.matched');
+                const matchedPairIds = Array.from(matchedElements).map(el => el.dataset.pairId);
+                let remainingCards = cardsData.filter(card => !matchedPairIds.includes(card.pairId));
+
+                // Mezclar de nuevo (Fisher-Yates)
+                for (let i = remainingCards.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [remainingCards[i], remainingCards[j]] = [remainingCards[j], remainingCards[i]];
+                }
+
+                // Actualizar las variables de estado para reflejar el nuevo "mini-tablero"
+                cardsData = remainingCards;
+                seenCards.clear();
+                
+                // Forzar re-render con clase correcta
+                renderBoard();
+            }, 1000);
+        }
+
+        function startGame() {
+            const count = parseInt(document.getElementById('player-count').value);
+            const cardCount = parseInt(document.getElementById('card-count').value);
+            players = [];
+
+            for (let i = 1; i <= count; i++) {
+                const name = document.getElementById(`player-${i}`).value.trim() || `Jugador ${i}`;
+                players.push({ name: name, score: 0 });
+            }
+
+            currentPlayerIndex = 0;
+            matchedPairsCount = 0;
+            seenCards.clear();
+            currentMode = document.getElementById('game-mode').value;
+            totalPairsTarget = cardCount / 2;
+            hasReshuffled = false;
+            cardsData = generateDeck(cardCount);
+
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+
+            // Iniciar música y mostrar botón
+            const bgMusic = document.getElementById('bg-music');
+            const muteBtn = document.getElementById('mute-btn');
+            bgMusic.play().catch(e => console.log('El navegador bloqueó el autoplay', e));
+            muteBtn.style.display = 'flex';
+            
+            renderScoreboard();
+            renderBoard();
+        }
+
+        function renderScoreboard() {
+            const container = document.getElementById('scoreboard');
+            container.innerHTML = '';
+
+            players.forEach((player, index) => {
+                const div = document.createElement('div');
+                div.className = `player-card ${index === currentPlayerIndex ? 'active' : ''}`;
+                div.id = `score-card-${index}`;
+                div.innerHTML = `
+                    <div class="name">${player.name}</div>
+                    <div class="score">${player.score}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateScoreboard() {
+            players.forEach((player, index) => {
+                const card = document.getElementById(`score-card-${index}`);
+                card.querySelector('.score').textContent = player.score;
+                if (index === currentPlayerIndex) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+        }
+
+        function renderBoard() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            grid.className = `grid cards-${cardsData.length}`;
+
+            cardsData.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card';
+                cardEl.dataset.index = index;
+                cardEl.dataset.pairId = card.pairId;
+
+                cardEl.innerHTML = `
+                    <div class="card-face card-back-face"></div>
+                    <div class="card-face card-front-face">${card.image}</div>
+                `;
+
+                cardEl.addEventListener('click', () => handleCardClick(cardEl, index));
+                grid.appendChild(cardEl);
+            });
+        }
+
+        function handleCardClick(cardEl, index) {
+            if (lockBoard) return;
+            if (cardEl.classList.contains('flipped') || cardEl.classList.contains('matched')) return;
+
+            cardEl.classList.add('flipped');
+            flippedCards.push({ element: cardEl, index: index, pairId: cardsData[index].pairId });
+
+            if (flippedCards.length === 2) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            lockBoard = true;
+            const [card1, card2] = flippedCards;
+
+            const idx1 = card1.index;
+            const idx2 = card2.index;
+            const isCard1Seen = seenCards.has(idx1);
+            const isCard2Seen = seenCards.has(idx2);
+
+            if (card1.pairId === card2.pairId) {
+                let points = 0;
+                
+                if (currentMode === 'classic') {
+                    points = 1;
+                } else {
+                    // Modo Probabilidades (Dinámico)
+                    const nCartasRestantes = cardsData.length - (matchedPairsCount * 2);
+                    
+                    if (!isCard1Seen && !isCard2Seen) {
+                        points = Math.max(1, nCartasRestantes - 1);
+                    } else if (isCard1Seen && isCard2Seen) {
+                        points = 1;
+                    } else {
+                        points = Math.max(1, Math.floor(nCartasRestantes / 2));
+                    }
+                }
+
+                // Puntaje doble para las imágenes 1, 8, 9 y 13
+                if (['kpop-1', 'kpop-8', 'kpop-9', 'kpop-13'].includes(card1.pairId)) {
+                    points *= 2;
+                }
+
+                // COINCIDENCIA: Sumar puntos y descartar cartas
+                players[currentPlayerIndex].score += points;
+                matchedPairsCount += 1;
+                animateScore(points, currentPlayerIndex);
+
+                setTimeout(() => {
+                    card1.element.classList.add('matched');
+                    card2.element.classList.add('matched');
+                    resetTurn();
+
+                    if (matchedPairsCount === totalPairsTarget) {
+                        endGame();
+                    } else if (totalPairsTarget === 24 && matchedPairsCount === 12 && !hasReshuffled) {
+                        hasReshuffled = true;
+                        reshuffleBoard();
+                    }
+                }, 600);
+            } else {
+                // NO COINCIDENCIA: Añadir a cartas vistas, voltear de nuevo y pasar turno
+                seenCards.add(idx1);
+                seenCards.add(idx2);
+
+                setTimeout(() => {
+                    card1.element.classList.remove('flipped');
+                    card2.element.classList.remove('flipped');
+                    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+                    resetTurn();
+                }, 1200);
+            }
+        }
+
+        function resetTurn() {
+            flippedCards = [];
+            lockBoard = false;
+            updateScoreboard();
+        }
+
+        function endGame() {
+            const modal = document.getElementById('winner-modal');
+            const title = document.getElementById('winner-title');
+            const detail = document.getElementById('winner-detail');
+
+            // Determinar ganador(es)
+            let maxScore = -1;
+            let winners = [];
+
+            players.forEach(p => {
+                if (p.score > maxScore) {
+                    maxScore = p.score;
+                    winners = [p.name];
+                } else if (p.score === maxScore) {
+                    winners.push(p.name);
+                }
+            });
+
+            if (winners.length === 1) {
+                title.textContent = `¡Victoria para ${winners[0]}!`;
+                detail.textContent = `Puntuación total: ${maxScore} pares encontrados.`;
+            } else {
+                title.textContent = `¡Empate!`;
+                detail.textContent = `Ganadores: ${winners.join(', ')} con ${maxScore} puntos cada uno.`;
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function resetToSetup() {
+            document.getElementById('winner-modal').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'block';
+        }
+
+        // Inicialización
+        renderPlayerInputs();
+    </script>
+</body>
+</html>

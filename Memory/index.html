@@ -727,7 +727,14 @@
 
         async function startVoiceChat() {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,   // Elimina el eco de los altavoces
+                        noiseSuppression: true,   // Filtra ruido de fondo (ventiladores, etc.)
+                        autoGainControl: true     // Normaliza el volumen del micrófono
+                    },
+                    video: false
+                });
                 voiceEnabled = true;
                 micMuted = false;
 

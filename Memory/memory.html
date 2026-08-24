@@ -294,6 +294,66 @@
             color: var(--text-muted);
         }
 
+        /* TEMPORIZADOR */
+        .timer-display {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--text-main);
+            background: var(--panel-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 12px;
+            padding: 10px 30px;
+            text-align: center;
+            letter-spacing: 2px;
+            min-width: 160px;
+        }
+
+        .timer-display.warning {
+            color: #f59e0b;
+            border-color: #f59e0b;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* TABLA DE RECORDS */
+        .leaderboard {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9rem;
+        }
+
+        .leaderboard th {
+            color: var(--text-muted);
+            padding: 6px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .leaderboard td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-main);
+        }
+
+        .leaderboard tr:first-child td {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+
+        .leaderboard tr.new-record td {
+            color: #10b981;
+            font-weight: 700;
+        }
+
+        .modal-content.wide {
+            max-width: 500px;
+        }
+
         /* ANIMACIÓN DE PUNTAJE */
         .floating-score {
             position: fixed;
@@ -358,7 +418,7 @@
             <div class="form-group">
                 <label for="player-count">Cantidad de Jugadores</label>
                 <select id="player-count" onchange="renderPlayerInputs(); savePreferences()">
-                    <option value="1">1 Jugador</option>
+                    <option value="1">1 Jugador (Contra el Tiempo)</option>
                     <option value="2" selected>2 Jugadores</option>
                     <option value="3">3 Jugadores</option>
                     <option value="4">4 Jugadores</option>
@@ -375,7 +435,7 @@
                 </select>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="game-mode-group">
                 <label for="game-mode">Modo de Juego</label>
                 <select id="game-mode" onchange="savePreferences()">
                     <option value="prob" selected>Dinámico</option>
@@ -391,16 +451,39 @@
         <!-- PANTALLA DE JUEGO -->
         <div id="game-screen">
             <div id="scoreboard" class="scoreboard"></div>
+            <div id="timer-container" style="display:none;">
+                <div id="timer-display" class="timer-display">00:00</div>
+            </div>
             <div id="grid" class="grid"></div>
         </div>
     </div>
 
-    <!-- MODAL FIN DE JUEGO -->
+    <!-- MODAL FIN DE JUEGO MULTIJUGADOR -->
     <div id="winner-modal" class="modal">
         <div class="modal-content">
             <h2 id="winner-title">¡Fin del Juego!</h2>
             <p id="winner-detail"></p>
             <button class="btn" onclick="resetToSetup()">Jugar de Nuevo</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE RECORDS (1 JUGADOR) -->
+    <div id="records-modal" class="modal">
+        <div class="modal-content wide">
+            <h2 id="records-title" style="color: #fbbf24;">⏱️ ¡Tiempo!</h2>
+            <p id="records-detail" style="margin-bottom:10px;"></p>
+            <table class="leaderboard" id="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Nombre</th>
+                        <th>Nivel</th>
+                        <th>Tiempo</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body"></tbody>
+            </table>
+            <button class="btn" style="margin-top:10px;" onclick="resetToSetup()">Jugar de Nuevo</button>
         </div>
     </div>
 
@@ -425,6 +508,77 @@
         let totalPairsTarget = 0;
         let hasReshuffled = false;
         let globalVolume = 1;
+        // Variables del modo 1 jugador
+        let isSoloMode = false;
+        let timerInterval = null;
+        let elapsedSeconds = 0;
+        const LEVEL_NAMES = { '12': 'Principiante', '24': 'Intermedio', '36': 'Avanzado', '48': 'Profesional' };
+
+        function formatTime(seconds) {
+            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function startTimer() {
+            elapsedSeconds = 0;
+            const display = document.getElementById('timer-display');
+            display.textContent = '00:00';
+            display.classList.remove('warning');
+            timerInterval = setInterval(() => {
+                elapsedSeconds++;
+                display.textContent = formatTime(elapsedSeconds);
+                if (elapsedSeconds >= 120) display.classList.add('warning'); // parpadea si supera 2 min
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        function getLeaderboard() {
+            return JSON.parse(localStorage.getItem('leaderboard') || '[]');
+        }
+
+        function saveLeaderboard(lb) {
+            localStorage.setItem('leaderboard', JSON.stringify(lb));
+        }
+
+        function addToLeaderboard(name, levelKey, seconds) {
+            const lb = getLeaderboard();
+            const entry = { name, level: LEVEL_NAMES[levelKey] || levelKey, seconds };
+            lb.push(entry);
+            lb.sort((a, b) => a.seconds - b.seconds);
+            const top10 = lb.slice(0, 10);
+            saveLeaderboard(top10);
+            return top10.findIndex(e => e.name === entry.name && e.seconds === entry.seconds);
+        }
+
+        function showRecordsModal(playerName, levelKey, newSeconds) {
+            stopTimer();
+            const newRankIndex = addToLeaderboard(playerName, levelKey, newSeconds);
+            const lb = getLeaderboard();
+
+            document.getElementById('records-title').textContent = '⏱️ ¡Juego Completado!';
+            document.getElementById('records-detail').textContent =
+                `${playerName} terminó en ${formatTime(newSeconds)}`;
+
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = '';
+            if (lb.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Sin records aún</td></tr>';
+            } else {
+                lb.forEach((entry, i) => {
+                    const tr = document.createElement('tr');
+                    if (i === newRankIndex) tr.classList.add('new-record');
+                    tr.innerHTML = `<td>${i + 1}</td><td>${entry.name}</td><td>${entry.level}</td><td>${formatTime(entry.seconds)}</td>`;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('records-modal').style.display = 'flex';
+        }
 
         function toggleMute() {
             const bgMusic = document.getElementById('bg-music');
@@ -453,6 +607,8 @@
         }
 
         function animateScore(points, playerIndex) {
+            if (isSoloMode) return; // No mostramos puntos en modo solitario (contra reloj)
+            
             const floater = document.createElement('div');
             floater.className = 'floating-score';
             floater.style.textAlign = 'center';
@@ -469,11 +625,14 @@
             document.body.appendChild(floater);
 
             const targetCard = document.getElementById(`score-card-${playerIndex}`);
-            const targetRect = targetCard.getBoundingClientRect();
-            
-            // Destino en la pantalla respecto al centro
-            const endX = (targetRect.left + targetRect.width / 2) - (window.innerWidth / 2);
-            const endY = (targetRect.top + targetRect.height / 2) - (window.innerHeight / 2);
+            let endX = 0;
+            let endY = 0;
+
+            if (targetCard) {
+                const targetRect = targetCard.getBoundingClientRect();
+                endX = (targetRect.left + targetRect.width / 2) - (window.innerWidth / 2);
+                endY = (targetRect.top + targetRect.height / 2) - (window.innerHeight / 2);
+            }
 
             const animation = floater.animate([
                 { opacity: 0, transform: 'translate(-50%, -50%) scale(0.5)', offset: 0 },
@@ -511,21 +670,22 @@
             const count = parseInt(document.getElementById('player-count').value);
             const container = document.getElementById('player-inputs');
             container.innerHTML = '';
+            
+            // En modo 1 jugador, ocultar el selector de modo de juego (no aplica)
+            const gameModeGroup = document.getElementById('game-mode-group');
+            gameModeGroup.style.display = count === 1 ? 'none' : 'block';
 
             for (let i = 1; i <= count; i++) {
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.id = `player-${i}`;
                 input.placeholder = `Jugador ${i}`;
-                input.value = ''; // Limpio por defecto
+                input.value = '';
                 
-                // Cargar nombre guardado
                 const savedName = localStorage.getItem(`savedPlayer${i}`);
                 if (savedName) input.value = savedName;
                 
-                // Guardar nombre al escribir
                 input.oninput = () => localStorage.setItem(`savedPlayer${i}`, input.value);
-                
                 container.appendChild(input);
             }
         }
@@ -598,9 +758,10 @@
             const count = parseInt(document.getElementById('player-count').value);
             const cardCount = parseInt(document.getElementById('card-count').value);
             players = [];
+            isSoloMode = (count === 1);
 
             for (let i = 1; i <= count; i++) {
-                const name = document.getElementById(`player-${i}`).value.trim() || `Jugador ${i}`;
+                const name = document.getElementById(`player-${i}`).value.trim() || (isSoloMode ? 'Jugador' : `Jugador ${i}`);
                 players.push({ name: name, score: 0 });
             }
 
@@ -615,13 +776,25 @@
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
 
+            const scoreboard = document.getElementById('scoreboard');
+            const timerContainer = document.getElementById('timer-container');
+
+            if (isSoloMode) {
+                scoreboard.style.display = 'none';
+                timerContainer.style.display = 'block';
+                startTimer();
+            } else {
+                scoreboard.style.display = 'flex';
+                timerContainer.style.display = 'none';
+                renderScoreboard();
+            }
+
             // Iniciar música y mostrar controles
             const bgMusic = document.getElementById('bg-music');
             const audioControls = document.getElementById('audio-controls');
             bgMusic.play().catch(e => console.log('El navegador bloqueó el autoplay', e));
             audioControls.style.display = 'flex';
             
-            renderScoreboard();
             renderBoard();
         }
 
@@ -642,13 +815,16 @@
         }
 
         function updateScoreboard() {
+            if (isSoloMode) return;
             players.forEach((player, index) => {
                 const card = document.getElementById(`score-card-${index}`);
-                card.querySelector('.score').textContent = player.score;
-                if (index === currentPlayerIndex) {
-                    card.classList.add('active');
-                } else {
-                    card.classList.remove('active');
+                if (card) {
+                    card.querySelector('.score').textContent = player.score;
+                    if (index === currentPlayerIndex) {
+                        card.classList.add('active');
+                    } else {
+                        card.classList.remove('active');
+                    }
                 }
             });
         }
@@ -762,6 +938,13 @@
         }
 
         function endGame() {
+            if (isSoloMode) {
+                const playerName = players[0].name;
+                const levelKey = document.getElementById('card-count').value;
+                showRecordsModal(playerName, levelKey, elapsedSeconds);
+                return;
+            }
+
             const modal = document.getElementById('winner-modal');
             const title = document.getElementById('winner-title');
             const detail = document.getElementById('winner-detail');
@@ -799,7 +982,9 @@
         }
 
         function resetToSetup() {
+            if (timerInterval) stopTimer();
             document.getElementById('winner-modal').style.display = 'none';
+            document.getElementById('records-modal').style.display = 'none';
             document.getElementById('game-screen').style.display = 'none';
             document.getElementById('setup-screen').style.display = 'block';
         }
